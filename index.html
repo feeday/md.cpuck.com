@@ -1,0 +1,2010 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta name="description" content="AI 对话、图像生成与 Markdown 编辑预览工作台。">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<script>
+(function () {
+  function memStore() {
+    const data=new Map();
+    return {get length(){return data.size;},key(i){return Array.from(data.keys())[i]??null;},
+      getItem(k){return data.has(String(k))?data.get(String(k)):null;},
+      setItem(k,v){data.set(String(k),String(v));},removeItem(k){data.delete(String(k));},clear(){data.clear();}};
+  }
+  for(const name of ['localStorage','sessionStorage']) {
+    try { const st=window[name]; const key='__aigx_probe_';st.setItem(key,'1');st.removeItem(key); }
+    catch { try {Object.defineProperty(window,name,{configurable:true,value:memStore()});}catch{} }
+  }
+})();
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+     <link rel="icon" type="image/png" href="/favicon.png">
+    <title>MDE Markdown 工作台</title>
+    <style>
+        :root {
+            --bg-body: #020617;
+            --bg-card: rgba(15, 23, 42, 0.78);
+            --bg-panel: rgba(30, 41, 59, 0.48);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-tertiary: #64748b;
+            --theme-blue: #38bdf8;
+            --theme-purple: #a78bfa;
+            --theme-green: #34d399;
+            --border-light: rgba(255, 255, 255, 0.1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; outline: none; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background-color: var(--bg-body);
+            background-image:
+                radial-gradient(circle at 20% -10%, rgba(56, 189, 248, 0.18), transparent 35%),
+                radial-gradient(circle at 85% 15%, rgba(167, 139, 250, 0.16), transparent 38%),
+                linear-gradient(135deg, rgba(15, 23, 42, 0.75), rgba(2, 6, 23, 1));
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 18px;
+            overflow: hidden;
+        }
+
+        /* 核心布局修改：使用 Flexbox 实现侧边栏平滑折叠 */
+        .workspace {
+            display: flex;
+            width: 100%;
+            height: calc(100dvh - 36px);
+            min-height: 0;
+            gap: 14px;
+            transition: gap 0.28s ease;
+        }
+
+        .workspace.sidebar-collapsed {
+            gap: 0;
+        }
+
+        .panel {
+            width: 330px;
+            min-width: 0;
+            flex: 0 0 330px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: 22px;
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.34);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            display: flex;
+            flex-direction: column;
+            transition: flex-basis 0.28s cubic-bezier(0.4, 0, 0.2, 1), border-width 0.28s, opacity 0.2s;
+            overflow: hidden;
+        }
+
+        /* 侧边栏折叠状态 */
+        .panel.collapsed {
+            flex-basis: 0;
+            width: 0;
+            min-width: 0;
+            margin-left: 0;
+            border-width: 0;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .main {
+            flex-grow: 1;
+            min-width: 0;
+            display: grid;
+            grid-template-rows: auto minmax(0, 1fr);
+            gap: 14px;
+        }
+
+        .editor-card, .preview-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: 22px;
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.34);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            overflow: hidden;
+        }
+
+        .panel-scroll { flex: 1 1 auto; min-height: 0; padding: 22px; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+        .panel-scroll::-webkit-scrollbar { width: 6px; }
+        .panel-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+
+        .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.1rem; margin-bottom: 18px; }
+        .brand-mark { width: 34px; height: 34px; border-radius: 12px; display: grid; place-items: center; background: linear-gradient(135deg, var(--theme-blue), var(--theme-purple)); color: #020617; }
+        .hint { color: var(--text-secondary); font-size: 0.82rem; line-height: 1.6; margin-bottom: 16px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 8px; font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+
+        .glass-input, textarea, select {
+            width: 100%;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            background: rgba(0, 0, 0, 0.28);
+            color: var(--text-primary);
+            padding: 11px 13px;
+            font: inherit;
+            transition: 0.2s ease;
+        }
+        .glass-input:focus, textarea:focus, select:focus { border-color: rgba(56, 189, 248, 0.55); box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.12); }
+
+        .btn {
+            height: 40px; border: 0; border-radius: 12px; padding: 0 14px; font-weight: 800; cursor: pointer; color: #020617; background: var(--theme-blue); display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: 0.18s ease; text-decoration: none; white-space: nowrap;
+        }
+        .btn:hover { transform: translateY(-1px); filter: brightness(1.05); }
+        .btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+        .btn.secondary { background: rgba(255, 255, 255, 0.09); color: var(--text-primary); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .btn.purple { background: var(--theme-purple); color: white;}
+        .btn.full { width: 100%; }
+        .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .actions-vertical { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 10px;}
+        .divider { height: 1px; background: var(--border-light); margin: 18px 0; }
+
+        .topbar {
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: 20px;
+            padding: 10px 14px;
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .tool-btn { min-width: 36px; height: 36px; padding: 0 8px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.06); color: var(--text-primary); cursor: pointer; font-weight: 800; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center;}
+        .tool-btn:hover { background: rgba(56, 189, 248, 0.16); border-color: rgba(56, 189, 248, 0.34); }
+
+        .split { min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+        .card-head { padding: 14px 16px; border-bottom: 1px solid var(--border-light); display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .card-title { font-weight: 800; }
+        .status { color: var(--text-secondary); font-size: 0.8rem; }
+        #markdownInput { height: calc(100% - 57px); min-height: 240px; border: 0; border-radius: 0; resize: none; background: rgba(2, 6, 23, 0.58); line-height: 1.7; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+
+        .preview-container { height: calc(100% - 57px); position: relative; }
+        .preview { height: 100%; overflow: auto; padding: 24px; background: rgba(255, 255, 255, 0.025); line-height: 1.75; }
+        .preview::-webkit-scrollbar { width: 8px; }
+        .preview::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+
+        .preview h1, .preview h2, .preview h3 { margin: 1.1em 0 0.55em; line-height: 1.25; }
+        .preview h1 { font-size: 2rem; border-bottom: 1px solid var(--border-light); padding-bottom: 0.3em; }
+        .preview h2 { font-size: 1.45rem; }
+        .preview h3 { font-size: 1.18rem; }
+        .preview p, .preview ul, .preview ol, .preview blockquote, .preview pre, .preview table { margin: 0.8em 0; }
+        .preview ul, .preview ol { padding-left: 1.45em; }
+        .preview blockquote { border-left: 4px solid var(--theme-blue); padding: 0.25em 1em; color: #cbd5e1; background: rgba(56, 189, 248, 0.08); border-radius: 0 12px 12px 0; }
+        .preview code { background: rgba(148, 163, 184, 0.14); padding: 0.15em 0.35em; border-radius: 6px; color: #bae6fd; }
+        .preview pre { background: rgba(0, 0, 0, 0.36); border: 1px solid var(--border-light); border-radius: 14px; padding: 14px; overflow-x: auto; }
+        .preview pre code { background: transparent; padding: 0; }
+        .preview table { width: 100%; border-collapse: collapse; overflow: hidden; border-radius: 12px; }
+        .preview th, .preview td { border: 1px solid var(--border-light); padding: 8px 10px; }
+        .preview th { background: rgba(56, 189, 248, 0.12); }
+        .preview img, .preview video { max-width: 100%; border-radius: 14px; border: 1px solid var(--border-light); margin: 10px 0; }
+        .preview a { color: #7dd3fc; }
+        .media-preview { display: grid; gap: 10px; margin-top: 10px; }
+        .media-preview img, .media-preview video { width: 100%; max-height: 170px; object-fit: contain; border: 1px solid var(--border-light); border-radius: 12px; background: rgba(0, 0, 0, 0.28); }
+        .small { font-size: 0.78rem; color: var(--text-tertiary); line-height: 1.55; }
+
+        @media (max-width: 980px) {
+            html, body { height: auto; min-height: 100%; }
+            body { padding: 0; overflow-x: hidden; overflow-y: auto; }
+            .workspace { height: auto; min-height: 100svh; flex-direction: column; padding: 12px; gap: 14px; }
+            .panel { width: 100%; flex: 0 0 auto; margin-left: 0; height: min(78svh, 760px); max-height: none; min-height: 0; }
+            .split { grid-template-columns: 1fr; }
+            .panel, .editor-card, .preview-card { border-radius: 18px; }
+            #markdownInput, .preview-container { height: 52vh; }
+            .panel-scroll { flex: 1 1 auto; min-height: 0; }
+            .panel.collapsed { display: none; }
+            .topbar { align-items: center; }
+            #docStats { order: 20; margin-left: auto; margin-right: 0 !important; }
+        }
+    
+        .workspace-section-title{font-size:.9rem;font-weight:850;color:#7dd3fc;margin:8px 0 12px;letter-spacing:.02em}
+        .chat-log{max-height:190px;min-height:72px;overflow:auto;display:flex;flex-direction:column;gap:8px;padding:9px;border:1px solid var(--border-light);border-radius:12px;background:rgba(0,0,0,.22)}
+        .chat-message{white-space:pre-wrap;overflow-wrap:anywhere;padding:8px 10px;border-radius:10px;font-size:.78rem;line-height:1.6}
+        .chat-message.user{background:rgba(56,189,248,.11);border-left:3px solid var(--theme-blue)}
+        .chat-message.assistant{background:rgba(167,139,250,.12);border-left:3px solid var(--theme-purple)}
+        .chat-empty{color:var(--text-tertiary);font-size:.76rem;line-height:1.6;text-align:center;padding:14px 5px}
+        .chat-status,.image-status{font-size:.76rem;line-height:1.55;color:var(--text-secondary);overflow-wrap:anywhere;margin-top:7px}
+        .chat-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+        .chat-diagnostics{grid-template-columns:auto minmax(0,1fr);align-items:center}
+        .chat-diagnostics .btn{height:34px;padding:0 11px;font-size:.76rem}
+        .image-settings{padding:12px;border:1px solid rgba(148,163,184,.14);border-radius:13px;background:rgba(2,6,23,.25);margin-bottom:10px}
+        .image-settings[hidden],.image-result[hidden],#imageTaskWrap[hidden]{display:none!important}
+        .image-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+        .image-source{display:none;align-items:center;gap:9px;padding:8px;margin-top:8px;border:1px solid var(--border-light);border-radius:11px;background:rgba(0,0,0,.2)}
+        .image-source.show{display:flex}
+        .image-source img{width:54px;height:54px;object-fit:cover;border-radius:8px}
+        .image-source-info{min-width:0;flex:1;font-size:.72rem;color:var(--text-secondary);overflow-wrap:anywhere}
+        .image-source button{height:30px;padding:0 9px}
+        .image-result{margin-top:9px;padding:8px;border:1px solid var(--border-light);border-radius:12px;background:rgba(0,0,0,.2)}
+        .image-result img{display:block;max-width:100%;max-height:220px;margin:auto;object-fit:contain;border-radius:8px}
+        .image-result-caption{font-size:.72rem;color:var(--text-secondary);margin-top:7px;overflow-wrap:anywhere}
+        .image-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+        .image-actions .btn{min-width:0;padding:0 8px;font-size:.76rem}
+        .image-status.success{color:var(--theme-green)}
+        .image-status.error{color:#fca5a5}
+        .export-btn{padding:0 10px;font-size:.76rem;min-width:42px}
+        @media(max-width:980px){.chat-log{max-height:220px}.image-result img{max-height:260px}}
+
+
+        .key-input-row{display:flex;align-items:stretch;gap:7px;min-width:0}
+        .key-input-row .glass-input{flex:1;min-width:0}
+        .key-toggle{flex:0 0 52px;min-width:52px;border:1px solid var(--border-light);border-radius:10px;background:rgba(255,255,255,.07);color:var(--text-secondary);font-size:.75rem;font-weight:700;cursor:pointer}
+        .key-toggle:hover{background:rgba(56,189,248,.14);color:var(--text-primary)}
+        .prompt-count{float:right;font-size:.72rem;font-weight:500;color:var(--text-tertiary);text-transform:none;letter-spacing:0}
+        .image-upload-drop{padding:9px;border:1px dashed rgba(148,163,184,.35);border-radius:12px;background:rgba(0,0,0,.14);transition:border-color .18s,background .18s}
+        .image-upload-drop.drag{border-color:var(--theme-blue);background:rgba(56,189,248,.1)}
+        .image-upload-drop .glass-input{padding:8px;font-size:.78rem}
+        .image-upload-drop .small{margin:7px 2px 0}
+        #docStats{display:inline-flex;align-items:center;white-space:nowrap;flex:0 0 auto;font-size:12px;font-variant-numeric:tabular-nums;line-height:1.5}
+        .image-settings a{color:#7dd3fc;text-decoration:none}
+        .image-settings a:hover{text-decoration:underline}
+        @media(max-width:980px){.key-toggle{flex-basis:48px;min-width:48px}.image-upload-drop{padding:8px}}
+
+</style>
+</head>
+<body>
+    <div class="workspace">
+
+        <aside class="panel" id="sidePanel">
+            <div class="panel-scroll">
+                <p class="hint">一个图片入口，支持原图插入 Markdown、AI 改图和连续编辑。</p>
+                <div class="workspace-section-title">对话 API 配置</div>
+
+                <div class="form-group">
+                    <label for="apiKey">🔑 对话 API Key</label>
+                    <div class="key-input-row"><input id="apiKey" class="glass-input" type="password" placeholder="请输入你的 API Key" autocomplete="off"><button class="key-toggle" id="toggleChatKey" type="button">显示</button></div>
+                </div>
+                <div class="form-group">
+                    <label for="apiBaseUrl">🌐 API URL</label>
+                    <input id="apiBaseUrl" class="glass-input" value="https://api.poixe.com/v1/" placeholder="https://api.poixe.com/v1/">
+                </div>
+                <div class="form-group">
+                    <label for="modelName">🤖 自定义对话模型</label>
+                    <input id="modelName" class="glass-input" value="deepseek-v4-flash" placeholder="例如：deepseek-v4-flash / gpt-4.1">
+                </div>
+
+                <div class="form-group">
+                    <label for="chatPrompt">💬 API 对话</label>
+                    <textarea id="chatPrompt" class="glass-input" rows="3" placeholder="输入问题，使用上方自定义 API 地址、密钥和模型进行对话…"></textarea>
+                    <div class="chat-actions">
+                        <button class="btn" id="chatSendBtn" type="button">发送对话</button>
+                        <button class="btn secondary" id="chatInsertBtn" type="button" disabled>插入回答到 MD</button>
+                    </div>
+                    <div class="chat-actions chat-diagnostics">
+                        <button class="btn secondary" id="chatTestBtn" type="button">测试 API 连接</button>
+                        <span class="small">浏览器直连服务商；测试会发送一条很短的请求。</span>
+                    </div>
+                    <div id="chatStatus" class="chat-status">支持 OpenAI 兼容的 /v1/chat/completions 接口。</div>
+                    <div id="chatLog" class="chat-log" aria-live="polite"><div class="chat-empty">对话内容会显示在这里。回答可一键插入 Markdown。</div></div>
+                    <div style="display:flex;justify-content:flex-end;margin-top:8px">
+                        <button class="btn secondary" id="chatClearBtn" type="button" style="height:32px;font-size:.76rem">清空对话</button>
+                    </div>
+                </div>
+
+                <div class="divider"></div>
+                <div class="workspace-section-title">图像生成与编辑</div>
+                <div class="form-group">
+                    <label for="imageModel">🎨 生成模型</label>
+                    <select id="imageModel" class="glass-input">
+                        <option value="gpt">GPT Image 2 · APIMart</option>
+                        <option value="qwen">Qwen Image 2.1 · Hugging Face</option>
+                    </select>
+                </div>
+
+                <section class="image-settings" id="imageGptSettings">
+                    <div class="form-group">
+                        <label for="imageApiKey">APIMart API Key</label>
+                        <div class="key-input-row"><input id="imageApiKey" class="glass-input" type="password" placeholder="粘贴你的 APIMart API Key" autocomplete="off"><button class="key-toggle" id="toggleImageApiKey" type="button">显示</button></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="imageApiBaseUrl">图像 API Base URL</label>
+                        <input id="imageApiBaseUrl" class="glass-input" type="url" value="https://api.apimart.ai" placeholder="https://api.apimart.ai">
+                    </div>
+                    <div class="form-group">
+                        <label for="imageModelId">图像模型 ID</label>
+                        <input id="imageModelId" class="glass-input" value="gpt-image-2-ext" placeholder="gpt-image-2-ext">
+                    </div>
+                    <label style="display:flex;align-items:center;gap:7px;font-size:.76rem;text-transform:none;letter-spacing:0">
+                        <input id="rememberImageKey" type="checkbox"> 在此浏览器记住图像 API Key
+                    </label>
+                </section>
+
+                <section class="image-settings" id="imageQwenSettings" hidden>
+                    <div class="form-group">
+                        <label for="hfToken">Hugging Face Token（可选）</label>
+                        <div class="key-input-row"><input id="hfToken" class="glass-input" type="password" placeholder="hf_...；公开 Space 可留空" autocomplete="off"><button class="key-toggle" id="toggleHfToken" type="button">显示</button></div>
+                        <p class="small"><a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener noreferrer">获取 Hugging Face Token ↗</a>；公开 Space 通常可留空。</p>
+                    </div>
+                    <div class="image-row">
+                        <div class="form-group">
+                            <label for="qwenSteps">推理步数</label>
+                            <select id="qwenSteps" class="glass-input"><option value="28">28 · 快速</option><option value="40" selected>40 · 推荐</option></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="qwenSeed">随机种子</label>
+                            <input id="qwenSeed" class="glass-input" type="number" min="0" max="2147483647" value="42">
+                        </div>
+                    </div>
+                    <label style="display:flex;align-items:center;gap:7px;font-size:.76rem;text-transform:none;letter-spacing:0">
+                        <input id="randomSeed" type="checkbox" checked> 每次使用新随机种子
+                    </label>
+                    <label style="display:flex;align-items:center;gap:7px;font-size:.76rem;text-transform:none;letter-spacing:0;margin-top:8px">
+                        <input id="rememberHfToken" type="checkbox"> 在此浏览器记住 HF Token
+                    </label>
+                    <p class="small">Space：assembledchaos/qwen-image-2-1-studio</p>
+                </section>
+
+                <div class="image-row">
+                    <div class="form-group" id="imageResolutionGroup">
+                        <label for="imageResolution">生成分辨率（GPT Image 2）</label>
+                        <select id="imageResolution" class="glass-input"><option value="1k">1K</option><option value="2k">2K</option><option value="4k">4K</option></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="imageAspect">画面比例</label>
+                        <select id="imageAspect" class="glass-input">
+                            <option value="1:1">1:1</option><option value="3:2">3:2</option><option value="2:3">2:3</option><option value="4:3">4:3</option><option value="3:4">3:4</option><option value="16:9">16:9</option><option value="9:16">9:16</option><option value="21:9">21:9</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="imageTaskMode">任务模式</label>
+                    <select id="imageTaskMode" class="glass-input">
+                        <option value="auto">自动判断（推荐）</option><option value="create">文生图</option><option value="edit">图像编辑</option><option value="transparent" id="imageTransparentOption">透明 PNG（仅 Qwen）</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="imagePrompt">提示词 / 编辑指令 <span class="prompt-count" id="imagePromptCount">0 字</span></label>
+                    <textarea id="imagePrompt" class="glass-input" rows="4" placeholder="描述想生成的画面，或说明如何修改参考图片…"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="imageInput">图片上传（统一入口）</label>
+                    <div class="image-upload-drop" id="imageUploadDrop"><input id="imageInput" class="glass-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif"><p class="small">选择或拖入一张图片；载入后可插入 MD，也可直接输入指令进行 AI 改图</p></div>
+                    <div class="image-source" id="imageSourcePreview">
+                        <img id="imageSourceThumb" alt="参考图预览">
+                        <div class="image-source-info" id="imageSourceInfo">参考图片已载入</div>
+                        <button class="btn secondary" id="removeImageSource" type="button">移除</button>
+                    </div>
+                    <button class="btn secondary full" id="insertSourceImageBtn" type="button" disabled style="margin-top:8px">插入原图到 MD</button>
+                </div>
+                <div class="actions">
+                    <button class="btn purple" id="generateImageBtn" type="button">✦ 生成图片</button>
+                    <button class="btn secondary" id="insertImageBtn" type="button" disabled>插入 MD</button>
+                </div>
+                <div class="image-actions">
+                    <button class="btn secondary" id="downloadImageBtn" type="button" disabled>下载图片</button>
+                    <button class="btn secondary" id="useImageBtn" type="button" disabled>继续编辑此图</button>
+                </div>
+                <div id="imageStatus" class="image-status">选择模型并输入提示词，即可生成图片；生成结果可直接插入 Markdown。</div>
+                <div id="imageTaskWrap" hidden>
+                    <label for="imageTaskId">查询之前提交的任务</label>
+                    <div class="actions">
+                        <input id="imageTaskId" class="glass-input" type="text" placeholder="task_...">
+                        <button id="queryImageTaskBtn" class="btn secondary" type="button">查询</button>
+                    </div>
+                </div>
+                <div id="imageResultPreview" class="image-result" hidden>
+                    <img id="imageResultImage" alt="AI 生成结果">
+                    <div class="image-result-caption" id="imageResultCaption">生成结果</div>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="form-group">
+                    <label for="aiInstruction">✨ 模型编辑指令</label>
+                    <select id="aiInstruction" class="glass-input">
+                        <option value="请检查下面文档的错别字、语病、代码错误等，并直接输出修正后的正文。禁止输出解释废话，严禁使用 markdown 标记包裹。">🔍 纠错与格式检查</option>
+                        <option value="请将下面的文档润色为表达清晰、结构完整、排版规范的中文文档。保留原格式，只输出修改后的结果，严禁使用 markdown 标记包裹。">🪄 润色并规范排版</option>
+                        <option value="请扩写下面的内容，补充必要说明、层级标题、列表和示例。保留原格式，只输出结果，严禁使用 markdown 标记包裹。">📝 扩写丰富内容</option>
+                        <option value="请精简下面的内容，让内容更简洁但不丢失关键信息。保留原格式，只输出结果，严禁使用 markdown 标记包裹。">✂️ 精简提取核心</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="customInstruction">自定义补充要求</label>
+                    <textarea id="customInstruction" rows="6" placeholder="例如：改成产品说明书风格，增加 FAQ，保留代码块..."></textarea>
+                </div>
+                <div class="actions">
+                    <button class="btn" id="aiReplaceBtn" onclick="runAiEdit('replace')">全文替换</button>
+                    <button class="btn secondary" id="aiAppendBtn" onclick="runAiEdit('append')">追加结果</button>
+                </div>
+                <p class="small" id="aiStatus" style="margin-top:10px; color: var(--theme-green);"></p>
+
+                <div class="divider"></div>
+
+                <div class="form-group">
+                    <label>🔍 查找与替换</label>
+                    <input type="text" id="findInput" class="glass-input" placeholder="查找内容 (支持正则)" style="margin-bottom: 8px;">
+                    <input type="text" id="replaceInput" class="glass-input" placeholder="替换为...">
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <label style="margin:0; display:flex; align-items:center; gap:6px; cursor:pointer;">
+                        <input type="checkbox" id="useRegex" checked> 用正则
+                    </label>
+                    <button class="btn secondary" style="height:32px; padding:0 12px; font-size:0.8rem;" onclick="executeReplace()">🔄 替换</button>
+                </div>
+
+
+
+            </div>
+        </aside>
+
+        <main class="main">
+
+            <div class="topbar">
+                <button class="tool-btn" id="sidebarToggleBtn" type="button" title="展开/收起侧边栏" aria-controls="sidePanel" aria-expanded="true" onclick="toggleSidebar()" style="font-size: 1.2rem; color: var(--theme-blue);">☰</button>
+                <div style="width: 1px; height: 20px; background: rgba(255,255,255,0.1); margin: 0 4px;"></div>
+
+                <button class="tool-btn" title="标题" onclick="wrapLine('# ', '')">H1</button>
+                <button class="tool-btn" title="二级标题" onclick="wrapLine('## ', '')">H2</button>
+                <button class="tool-btn" title="加粗" onclick="wrapSelection('**', '**')">B</button>
+                <button class="tool-btn" title="斜体" onclick="wrapSelection('*', '*')"><em>I</em></button>
+                <button class="tool-btn" title="引用" onclick="wrapLine('> ', '')">❝</button>
+                <button class="tool-btn" title="无序列表" onclick="wrapLine('- ', '')">•</button>
+                <button class="tool-btn" title="有序列表" onclick="wrapLine('1. ', '')">1.</button>
+                <button class="tool-btn" title="代码块" onclick="wrapSelection('```\n', '\n```')">{ }</button>
+                <button class="tool-btn" title="链接" onclick="wrapSelection('[', '](https://)')">🔗</button>
+                <button class="tool-btn" title="表格" onclick="insertAtCursor('\n| 项目 | 说明 |\n| --- | --- |\n| 示例 | 内容 |\n')">Table</button>
+
+                <div style="flex-grow: 1;"></div>
+
+                <span class="status" id="docStats" style="font-family: ui-monospace, monospace; margin-right: 12px; background: rgba(0,0,0,0.2); padding: 4px 10px; border-radius: 8px;">
+                    总:0 汉:0 英:0 数:0 标:0
+                </span>
+
+                <button class="tool-btn" title="在新标签页测试网页代码" onclick="openWebPreview()" style="font-size: 1.1rem; padding-bottom: 2px;">🌐</button>
+                <button class="tool-btn export-btn" title="下载 Markdown 文件" onclick="downloadFile()">MD↓</button>
+                <button class="tool-btn export-btn" title="下载 Word 文档（DOCX）" onclick="downloadWord()">Word↓</button>
+                <button class="tool-btn export-btn" title="下载 PDF 文档" onclick="downloadPdf()">PDF↓</button>
+                <button class="tool-btn" title="复制全部源码" onclick="copyContent()">📋</button>
+                <div style="width: 1px; height: 20px; background: rgba(255,255,255,0.1); margin: 0 2px;"></div>
+                <button class="tool-btn" title="清空编辑器所有内容" onclick="clearDocument()" style="color: #fca5a5; font-size: 1.1rem; padding-bottom: 2px;">🗑️</button>
+            </div>
+
+            <section class="split">
+                <div class="editor-card">
+                    <div class="card-head"><span class="card-title">编辑器</span><span class="status">自动保存</span></div>
+                    <textarea id="markdownInput" spellcheck="false" oninput="handleInput()"></textarea>
+                </div>
+                <div class="preview-card">
+                    <div class="card-head"><span class="card-title">实时渲染</span><span class="status">MD Preview</span></div>
+                    <div class="preview-container">
+                        <article class="preview" id="previewPane"></article>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const DEFAULT_DOC = '# MDE Markdown 工作台\n\n欢迎使用 AI + Markdown 工作台。\n\n- 左侧：配置自定义对话 API、选择模型、进行 AI 对话与图像生成。\n- 中间：编辑 Markdown 源文档。\n- 右侧：实时预览排版效果。\n- 支持导出 Markdown、Word（DOCX）和 PDF。\n\n你可以把 AI 对话回答或生成图片直接插入当前文档。';
+        const STORAGE_KEYS = {
+            doc: 'md_editor_document',
+            apiKey: 'md_editor_api_key',
+            apiBaseUrl: 'md_editor_api_base_url',
+            modelName: 'md_editor_model_name',
+            imageModel: 'md_editor_image_model',
+            imageApiBaseUrl: 'md_editor_image_api_base_url',
+            imageModelId: 'md_editor_image_model_id',
+            imageResolution: 'md_editor_image_resolution',
+            imageAspect: 'md_editor_image_aspect',
+            qwenSteps: 'md_editor_qwen_steps',
+            qwenSeed: 'md_editor_qwen_seed'
+        };
+
+        let chatHistory = [];
+        let lastChatReply = '';
+
+        window.addEventListener('load', () => {
+            document.getElementById('markdownInput').value = localStorage.getItem(STORAGE_KEYS.doc) || DEFAULT_DOC;
+            document.getElementById('apiKey').value = localStorage.getItem(STORAGE_KEYS.apiKey) || localStorage.getItem('frontend_api_key') || '';
+            document.getElementById('apiBaseUrl').value = localStorage.getItem(STORAGE_KEYS.apiBaseUrl) || localStorage.getItem('frontend_base_url') || 'https://api.poixe.com/v1/';
+            document.getElementById('modelName').value = localStorage.getItem(STORAGE_KEYS.modelName) || 'deepseek-v4-flash';
+            document.getElementById('imageModel').value = localStorage.getItem(STORAGE_KEYS.imageModel) || 'gpt';
+            const savedImageApiKey = safeStorageGet('cpuck_image_api_key') || safeStorageGet('tcq_html_imageApiKey');
+            document.getElementById('imageApiKey').value = savedImageApiKey;
+            document.getElementById('rememberImageKey').checked = !!savedImageApiKey;
+            document.getElementById('imageApiBaseUrl').value = localStorage.getItem(STORAGE_KEYS.imageApiBaseUrl) || safeStorageGet('cpuck_image_api_base') || 'https://api.apimart.ai';
+            document.getElementById('imageModelId').value = localStorage.getItem(STORAGE_KEYS.imageModelId) || 'gpt-image-2-ext';
+            const savedHfToken = safeStorageGet('cpuck_image_hf_token') || safeStorageGet('tcq_html_hfApiKey');
+            document.getElementById('hfToken').value = savedHfToken;
+            document.getElementById('rememberHfToken').checked = !!savedHfToken;
+            document.getElementById('imageResolution').value = localStorage.getItem(STORAGE_KEYS.imageResolution) || '1k';
+            document.getElementById('imageAspect').value = localStorage.getItem(STORAGE_KEYS.imageAspect) || '1:1';
+            document.getElementById('qwenSteps').value = localStorage.getItem(STORAGE_KEYS.qwenSteps) || '40';
+            document.getElementById('qwenSeed').value = localStorage.getItem(STORAGE_KEYS.qwenSeed) || '42';
+            ['apiKey', 'apiBaseUrl', 'modelName'].forEach(id => {
+                document.getElementById(id).addEventListener('input', saveSettings);
+            });
+            ['imageApiBaseUrl', 'imageModelId', 'imageResolution', 'imageAspect', 'qwenSteps', 'qwenSeed'].forEach(id => {
+                document.getElementById(id).addEventListener('change', saveImageSettings);
+            });
+            ['imageApiKey', 'hfToken'].forEach(id => {
+                document.getElementById(id).addEventListener('change', saveImageSettings);
+            });
+            renderPreview();
+            initChatUI();
+            initImageGenerator();
+        });
+
+        function saveSettings() {
+            safeStorageSet(STORAGE_KEYS.apiKey, document.getElementById('apiKey').value.trim());
+            safeStorageSet(STORAGE_KEYS.apiBaseUrl, document.getElementById('apiBaseUrl').value.trim());
+            safeStorageSet(STORAGE_KEYS.modelName, document.getElementById('modelName').value.trim());
+        }
+
+        function handleInput() {
+            const text = document.getElementById('markdownInput').value;
+            const saved = safeStorageSet(STORAGE_KEYS.doc, text);
+            renderPreview();
+            return saved;
+        }
+
+        // --- 控制台平滑折叠 ---
+        function toggleSidebar() {
+            const panel = document.getElementById('sidePanel');
+            const workspace = document.querySelector('.workspace');
+            const button = document.getElementById('sidebarToggleBtn');
+            const collapsed = panel.classList.toggle('collapsed');
+            workspace.classList.toggle('sidebar-collapsed', collapsed);
+            button.setAttribute('aria-expanded', String(!collapsed));
+            button.setAttribute('aria-label', collapsed ? '展开侧边栏' : '收起侧边栏');
+        }
+
+        // --- 核心：在新标签打开网页预览 ---
+        function openWebPreview() {
+            const htmlContent = document.getElementById('markdownInput').value;
+            if(!htmlContent.trim()) return alert("请先在编辑器输入 HTML/JS 代码！");
+
+            // 使用 Blob 生成安全的本地临时网页
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            window.open(url, '_blank');
+            // 稍作延迟释放内存
+            setTimeout(() => URL.revokeObjectURL(url), 10000);
+        }
+
+        // --- 核心：强兼容版清空与复制 ---
+        function clearDocument() {
+            if (confirm('⚠️ 确定要彻底清空编辑器中的所有内容吗？')) {
+                const mdInput = document.getElementById('markdownInput');
+                mdInput.value = '';
+                handleInput();
+                mdInput.focus();
+            }
+        }
+
+        function copyContent() {
+            const text = document.getElementById('markdownInput').value;
+            if (!text) return alert('当前没有可复制的内容！');
+
+            // 尝试现代 API
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text)
+                    .then(() => alert('✅ 已复制全文至剪贴板'))
+                    .catch(() => fallbackCopyTextToClipboard(text));
+            } else {
+                // 降级使用传统 API (解决 HTTP 环境下的兼容性问题)
+                fallbackCopyTextToClipboard(text);
+            }
+        }
+
+        function fallbackCopyTextToClipboard(text) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            // 防止页面滚动
+            textArea.style.top = "0";
+            textArea.style.left = "0";
+            textArea.style.position = "fixed";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                alert('✅ 已复制全文至剪贴板');
+            } catch (err) {
+                alert('❌ 复制失败，请在编辑器中手动全选复制 (Ctrl+A / Ctrl+C)');
+            }
+            document.body.removeChild(textArea);
+        }
+
+        function downloadFile() {
+            const text = document.getElementById('markdownInput').value;
+            if (!text) return alert('内容为空，无法下载');
+            const blob = new Blob([text], { type: `text/markdown;charset=utf-8` });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Document_${Date.now()}.md`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+
+
+        function getDocumentBaseName() {
+            const text = getTextarea().value || '';
+            const match = text.match(/^#\s+(.+)$/m);
+            const name = (match ? match[1] : 'MDE_Document').replace(/[\\/:*?"<>|]/g, '_').trim();
+            return (name || 'MDE_Document').slice(0, 80);
+        }
+
+        function saveBlobAsFile(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1500);
+        }
+
+        function loadExternalScript(src, isReady) {
+            if (isReady()) return Promise.resolve();
+            return new Promise((resolve, reject) => {
+                let existing = Array.from(document.scripts).find(item => item.src === src);
+                if (existing && isReady()) { resolve(); return; }
+                if (existing && existing.dataset.failed === 'true') { existing.remove(); existing = null; }
+                if (existing && existing.dataset.loaded === 'true') {
+                    reject(new Error('组件已加载，但初始化失败：' + src));
+                    return;
+                }
+                if (existing) {
+                    existing.addEventListener('load', () => resolve(), { once: true });
+                    existing.addEventListener('error', () => reject(new Error('组件加载失败：' + src)), { once: true });
+                    return;
+                }
+                const script = document.createElement('script');
+                script.src = src;
+                script.async = true;
+                script.onload = () => { script.dataset.loaded = 'true'; resolve(); };
+                script.onerror = () => { script.dataset.failed = 'true'; script.remove(); reject(new Error('组件加载失败，请检查网络或 CDN：' + src)); };
+                document.head.appendChild(script);
+            });
+        }
+
+        function docxInlineRuns(text, lib) {
+            const parts = String(text || '').replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '$1（图片链接：$2）')
+                .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1（$2）')
+                .split(/(\*\*[^*]+\*\*|__[^_]+__|\x60[^\x60]+\x60|\*[^*]+\*|_[^_]+_)/g)
+                .filter(Boolean);
+            return parts.map(part => {
+                let value = part, options = { font: 'Microsoft YaHei', size: 22 };
+                if ((part.startsWith('**') && part.endsWith('**')) || (part.startsWith('__') && part.endsWith('__'))) {
+                    value = part.slice(2, -2);
+                    options.bold = true;
+                } else if (part.charCodeAt(0) === 96 && part.charCodeAt(part.length - 1) === 96) {
+                    value = part.slice(1, -1);
+                    options.font = 'Consolas';
+                    options.color = '475569';
+                    options.size = 20;
+                } else if ((part.startsWith('*') && part.endsWith('*')) || (part.startsWith('_') && part.endsWith('_'))) {
+                    value = part.slice(1, -1);
+                    options.italics = true;
+                }
+                options.text = value;
+                return new lib.TextRun(options);
+            });
+        }
+
+        async function markdownToDocxBlocks(markdown, lib) {
+            const lines = String(markdown || '').replace(/\r/g, '').split('\n');
+            const children = [];
+            let codeLines = [];
+            let inCode = false;
+            let tableLines = [];
+
+            const paragraph = (text, extra) => new lib.Paragraph(Object.assign({
+                children: docxInlineRuns(text, lib),
+                spacing: { after: 140, line: 300 }
+            }, extra || {}));
+
+            const flushCode = () => {
+                if (!codeLines.length) return;
+                children.push(new lib.Paragraph({
+                    children: [new lib.TextRun({
+                        text: codeLines.join('\n'),
+                        font: 'Consolas',
+                        size: 18,
+                        color: '334155'
+                    })],
+                    indent: { left: 180, right: 180 },
+                    spacing: { before: 100, after: 180 }
+                }));
+                codeLines = [];
+            };
+
+            const parseCells = line => line.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(cell => cell.trim());
+            const flushTable = () => {
+                if (!tableLines.length) return;
+                const rows = tableLines.map(parseCells).filter(cells => !cells.every(cell => /^:?-{3,}:?$/.test(cell)));
+                if (rows.length) {
+                    const colCount = Math.max(1, ...rows.map(row => row.length));
+                    const border = { style: lib.BorderStyle.SINGLE, size: 1, color: 'CBD5E1' };
+                    const borders = { top: border, bottom: border, left: border, right: border, insideHorizontal: border, insideVertical: border };
+                    children.push(new lib.Table({
+                        width: { size: 100, type: lib.WidthType.PERCENTAGE },
+                        columnWidths: Array(colCount).fill(Math.floor(9000 / colCount)),
+                        borders,
+                        rows: rows.map((cells, rowIndex) => new lib.TableRow({
+                            cantSplit: true,
+                            children: Array.from({ length: colCount }, (_, colIndex) => new lib.TableCell({
+                                width: { size: Math.floor(100 / colCount), type: lib.WidthType.PERCENTAGE },
+                                margins: { top: 80, bottom: 80, left: 100, right: 100 },
+                                shading: rowIndex === 0 ? { fill: 'EAF2F8' } : undefined,
+                                children: [new lib.Paragraph({
+                                    children: docxInlineRuns(cells[colIndex] || '', lib),
+                                    spacing: { after: 40 }
+                                })]
+                            }))
+                        }))
+                    }));
+                    children.push(new lib.Paragraph({ children: [new lib.TextRun('')], spacing: { after: 100 } }));
+                }
+                tableLines = [];
+            };
+
+            for (const line of lines) {
+                if (/^\s*\x60{3}/.test(line)) {
+                    flushTable();
+                    if (inCode) flushCode();
+                    inCode = !inCode;
+                    continue;
+                }
+                if (inCode) {
+                    codeLines.push(line);
+                    continue;
+                }
+                if (/^\s*\|.*\|\s*$/.test(line)) {
+                    tableLines.push(line);
+                    continue;
+                }
+                flushTable();
+                if (!line.trim()) continue;
+
+                const image = line.match(/^\s*!\[([^\]]*)\]\((.+)\)\s*$/);
+                if (image) {
+                    try {
+                        const response = await fetch(image[2]);
+                        if (!response.ok) throw new Error('HTTP ' + response.status);
+                        const blob = await response.blob();
+                        const bytes = new Uint8Array(await blob.arrayBuffer());
+                        let width = 520, height = 340;
+                        try {
+                            const bitmap = await createImageBitmap(blob);
+                            const scale = Math.min(1, 560 / bitmap.width, 420 / bitmap.height);
+                            width = Math.max(1, Math.round(bitmap.width * scale));
+                            height = Math.max(1, Math.round(bitmap.height * scale));
+                            bitmap.close();
+                        } catch (error) {}
+                        children.push(new lib.Paragraph({
+                            children: [new lib.ImageRun({
+                                data: bytes,
+                                transformation: { width: width, height: height }
+                            })],
+                            alignment: lib.AlignmentType.CENTER,
+                            spacing: { before: 100, after: 160 }
+                        }));
+                    } catch (error) {
+                        children.push(paragraph('图片：' + image[1] + '（图片链接：' + image[2] + '）'));
+                    }
+                    continue;
+                }
+
+                const heading = line.match(/^(#{1,6})\s+(.+)$/);
+                if (heading) {
+                    const level = heading[1].length;
+                    const headingLevels = [
+                        null,
+                        lib.HeadingLevel.HEADING_1,
+                        lib.HeadingLevel.HEADING_2,
+                        lib.HeadingLevel.HEADING_3,
+                        lib.HeadingLevel.HEADING_4,
+                        lib.HeadingLevel.HEADING_5,
+                        lib.HeadingLevel.HEADING_6
+                    ];
+                    children.push(paragraph(heading[2], {
+                        heading: headingLevels[level],
+                        spacing: { before: 220, after: 120 }
+                    }));
+                    continue;
+                }
+                if (/^\s*[-*+]\s+/.test(line)) {
+                    children.push(paragraph('•  ' + line.replace(/^\s*[-*+]\s+/, ''), { indent: { left: 360, hanging: 180 } }));
+                    continue;
+                }
+                const ordered = line.match(/^\s*(\d+)[.)]\s+(.+)$/);
+                if (ordered) {
+                    children.push(paragraph(ordered[1] + '.  ' + ordered[2], { indent: { left: 360, hanging: 180 } }));
+                    continue;
+                }
+                if (/^\s*>\s?/.test(line)) {
+                    children.push(paragraph(line.replace(/^\s*>\s?/, ''), {
+                        indent: { left: 420 },
+                        border: { left: { color: '38BDF8', space: 8, style: lib.BorderStyle.SINGLE, size: 16 } }
+                    }));
+                    continue;
+                }
+                if (/^\s*(---|\*\*\*|___)\s*$/.test(line)) {
+                    children.push(new lib.Paragraph({ border: { bottom: { color: 'CBD5E1', style: lib.BorderStyle.SINGLE, size: 6 } }, spacing: { after: 180 } }));
+                    continue;
+                }
+                children.push(paragraph(line));
+            }
+            if (inCode) flushCode();
+            flushTable();
+            if (!children.length) children.push(new lib.Paragraph({ children: [new lib.TextRun(' ')] }));
+            return children;
+        }
+
+        async function downloadWord() {
+            const button = document.querySelector('[onclick="downloadWord()"]');
+            if (button) button.disabled = true;
+            try {
+                await loadExternalScript('https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js', () => !!window.docx);
+                const lib = window.docx;
+                if (!lib || !lib.Document || !lib.Packer) throw new Error('Word 文档组件未正确加载。');
+                const doc = new lib.Document({
+                    styles: {
+                        default: {
+                            document: {
+                                run: { font: 'Microsoft YaHei', size: 22, color: '1F2937' },
+                                paragraph: { spacing: { after: 140, line: 300 } }
+                            }
+                        }
+                    },
+                    sections: [{
+                        properties: { page: { margin: { top: 900, right: 900, bottom: 900, left: 900 } } },
+                        children: await markdownToDocxBlocks(getTextarea().value, lib)
+                    }]
+                });
+                const blob = await lib.Packer.toBlob(doc);
+                saveBlobAsFile(blob, getDocumentBaseName() + '.docx');
+            } catch (error) {
+                alert('Word 导出失败：' + (error.message || error));
+            } finally {
+                if (button) button.disabled = false;
+            }
+        }
+
+        async function waitForPdfImages(root) {
+            const images = Array.from(root.querySelectorAll('img'));
+            await Promise.all(images.map(img => new Promise(resolve => {
+                let done = false;
+                const finish = () => {
+                    if (done) return;
+                    done = true;
+                    if (!img.naturalWidth && img.parentNode) {
+                        const fallback = document.createElement('div');
+                        fallback.className = 'pdf-image-fallback';
+                        fallback.textContent = img.alt ? '图片：' + img.alt : '图片加载失败';
+                        img.replaceWith(fallback);
+                    }
+                    resolve();
+                };
+                if (img.complete) { finish(); return; }
+                img.addEventListener('load', finish, { once: true });
+                img.addEventListener('error', finish, { once: true });
+                setTimeout(finish, 12000);
+            })));
+        }
+
+        async function downloadPdf() {
+            const button = document.querySelector('[onclick="downloadPdf()"]');
+            if (button) button.disabled = true;
+            let wrap = null;
+            let style = null;
+            let progress = null;
+            const previousHtmlOverflow = document.documentElement.style.overflow;
+            const previousBodyOverflow = document.body.style.overflow;
+            const previousHtmlHeight = document.documentElement.style.height;
+            const previousBodyHeight = document.body.style.height;
+            try {
+                const markdown = getTextarea().value || '';
+                if (!markdown.trim()) throw new Error('当前 Markdown 文档为空，没有可导出的内容。');
+                await loadExternalScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js', () => typeof window.html2pdf === 'function');
+
+                style = document.createElement('style');
+                style.id = 'mdePdfExportStyle';
+                style.textContent = [
+                    '.pdf-export-root{position:fixed;left:0;top:0;width:794px;min-height:1123px;display:block;overflow:visible;z-index:2147483647;margin:0;padding:0;background:#fff;color:#1f2937;font-family:"Microsoft YaHei","PingFang SC","Noto Sans CJK SC","Source Han Sans SC",SimSun,Arial,sans-serif;font-size:14px;line-height:1.75;box-sizing:border-box}',
+                    '.pdf-export-root *{box-sizing:border-box!important;color:#1f2937!important;text-shadow:none!important;box-shadow:none!important}',
+                    '.pdf-export-content{width:794px;min-height:1123px;padding:42px 46px 52px;background:#fff;overflow:visible;overflow-wrap:anywhere;word-break:normal}',
+                    '.pdf-export-content h1{font-size:26px;line-height:1.35;margin:0 0 22px;padding-bottom:12px;border-bottom:1px solid #cbd5e1;break-after:avoid;page-break-after:avoid}',
+                    '.pdf-export-content h2{font-size:21px;line-height:1.4;margin:24px 0 12px;break-after:avoid;page-break-after:avoid}',
+                    '.pdf-export-content h3,.pdf-export-content h4,.pdf-export-content h5,.pdf-export-content h6{font-size:16px;line-height:1.45;margin:18px 0 9px;break-after:avoid;page-break-after:avoid}',
+                    '.pdf-export-content p{margin:9px 0;line-height:1.8;overflow-wrap:anywhere;word-break:normal}',
+                    '.pdf-export-content ul,.pdf-export-content ol{padding-left:25px;margin:10px 0}',
+                    '.pdf-export-content li{margin:4px 0;line-height:1.7;overflow-wrap:anywhere}',
+                    '.pdf-export-content blockquote{margin:12px 0;padding:8px 14px;border-left:4px solid #64748b;background:#f8fafc}',
+                    '.pdf-export-content a{color:#0369a1!important;overflow-wrap:anywhere;word-break:break-all}',
+                    '.pdf-export-content table{width:100%!important;max-width:100%!important;margin:14px 0;border-collapse:collapse;table-layout:fixed;font-size:12px;page-break-inside:auto}',
+                    '.pdf-export-content th,.pdf-export-content td{border:1px solid #cbd5e1!important;padding:7px 8px;text-align:left;vertical-align:top;overflow-wrap:anywhere;word-break:break-word}',
+                    '.pdf-export-content th{background:#eaf2f8!important;font-weight:700}',
+                    '.pdf-export-content tr{break-inside:avoid;page-break-inside:avoid}',
+                    '.pdf-export-content pre{max-width:100%;margin:12px 0;padding:12px;border:1px solid #dbe3ec;border-radius:5px;background:#f3f4f6!important;white-space:pre-wrap!important;overflow-wrap:anywhere!important;word-break:break-word;font-family:Consolas,"Courier New",monospace;font-size:10px;line-height:1.55}',
+                    '.pdf-export-content code{background:#f1f5f9!important;font-family:Consolas,"Courier New",monospace;font-size:.92em;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word}',
+                    '.pdf-export-content pre code{background:transparent!important}',
+                    '.pdf-export-content img{display:block;max-width:100%!important;height:auto!important;margin:12px auto;object-fit:contain;break-inside:avoid;page-break-inside:avoid}',
+                    '.pdf-export-content video{display:none!important}',
+                    '.pdf-image-fallback{margin:10px 0;padding:8px 10px;border:1px dashed #94a3b8;color:#64748b!important;font-size:12px}',
+                    '.pdf-export-content hr{border:0;border-top:1px solid #cbd5e1;margin:18px 0}'
+                ].join('\n');
+                document.head.appendChild(style);
+
+                wrap = document.createElement('div');
+                wrap.className = 'pdf-export-root';
+                const content = document.createElement('div');
+                content.className = 'pdf-export-content';
+                content.innerHTML = renderMarkdown(markdown);
+                wrap.appendChild(content);
+                document.documentElement.style.overflow = 'visible';
+                document.body.style.overflow = 'visible';
+                document.documentElement.style.height = 'auto';
+                document.body.style.height = 'auto';
+                document.body.appendChild(wrap);
+
+                progress = document.createElement('div');
+                progress.textContent = '正在生成 PDF，请稍候…';
+                progress.style.cssText = 'position:fixed;right:16px;top:16px;z-index:2147483647;padding:10px 14px;border-radius:10px;background:#0f172a;color:#fff;font:13px/1.5 sans-serif;box-shadow:0 4px 18px rgba(0,0,0,.25)';
+                document.body.appendChild(progress);
+
+                for (const img of Array.from(content.querySelectorAll('img'))) {
+                    const src = img.getAttribute('src') || '';
+                    if (/^https?:\/\//i.test(src)) {
+                        img.removeAttribute('src');
+                        img.crossOrigin = 'anonymous';
+                        img.src = src;
+                    }
+                }
+                await waitForPdfImages(content);
+                if (document.fonts && document.fonts.ready) await document.fonts.ready;
+                await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+                await window.html2pdf().set({
+                    margin: [10, 10, 12, 10],
+                    filename: getDocumentBaseName() + '.pdf',
+                    image: { type: 'jpeg', quality: 0.96 },
+                    html2canvas: { scale: 2, useCORS: true, allowTaint: false, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0, windowWidth: 794, logging: false },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
+                    pagebreak: { mode: ['css', 'legacy'], avoid: ['h1', 'h2', 'h3', 'tr', 'img'] }
+                }).from(content).save();
+            } catch (error) {
+                alert('PDF 导出失败：' + (error.message || error));
+            } finally {
+                if (wrap) wrap.remove();
+                if (style) style.remove();
+                if (progress) progress.remove();
+                document.documentElement.style.overflow = previousHtmlOverflow;
+                document.body.style.overflow = previousBodyOverflow;
+                document.documentElement.style.height = previousHtmlHeight;
+                document.body.style.height = previousBodyHeight;
+                if (button) button.disabled = false;
+            }
+        }
+
+        // --- 查找与正则替换 ---
+        function executeReplace() {
+            const findStr = document.getElementById("findInput").value;
+            const repStr = document.getElementById("replaceInput").value;
+            const useRegex = document.getElementById("useRegex").checked;
+            const inputEl = document.getElementById('markdownInput');
+            let text = inputEl.value;
+
+            if(!findStr) return alert("请输入要查找的内容！");
+
+            try {
+                if(useRegex) {
+                    const regex = new RegExp(findStr, 'g');
+                    text = text.replace(regex, repStr);
+                } else {
+                    text = text.split(findStr).join(repStr);
+                }
+                inputEl.value = text;
+                handleInput();
+                alert("✅ 替换执行完毕！");
+            } catch(e) {
+                alert("❌ 正则表达式错误: " + e.message);
+            }
+        }
+
+        // --- 多维度详细统计 ---
+        function updateStats() {
+            const text = document.getElementById('markdownInput').value || "";
+            const total = text.length;
+            const cn = (text.match(/[\u4e00-\u9fa5]/g) || []).length;
+            const en = (text.match(/[a-zA-Z]/g) || []).length;
+            const num = (text.match(/\d/g) || []).length;
+            // 匹配常见中英文标点及特殊符号
+            const punc = (text.match(/[.,\/#!$%\^&\*;:{}=\-_\x60~()。,、；：？！…—·「」『』（）［］【】《》〈〉"']/g) || []).length;
+
+            document.getElementById('docStats').innerHTML = `总:${total} &nbsp;汉:${cn} &nbsp;英:${en} &nbsp;数:${num} &nbsp;标:${punc}`;
+        }
+
+        // --- 基础工具与 Markdown 解析 ---
+        function escapeHtml(text) {
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function inlineMarkdown(text) {
+            return escapeHtml(text)
+                .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">')
+                .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+                .replace(/`([^`]+)`/g, '<code>$1</code>')
+                .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*([^*]+)\*/g, '<em>$1</em>');
+        }
+
+        function renderMarkdown(markdown) {
+            const lines = markdown.split('\n');
+            const html = [];
+            let inCode = false; let codeLines = [];
+            let inUl = false; let inOl = false; let inTable = false; let tableHasHeader = false;
+
+            const closeLists = () => { if (inUl) { html.push('</ul>'); inUl = false; } if (inOl) { html.push('</ol>'); inOl = false; } };
+            const closeTable = () => { if (inTable) { html.push('</tbody></table>'); inTable = false; tableHasHeader = false; } };
+
+            lines.forEach((line) => {
+                if (line.trim().startsWith('```')) {
+                    if (inCode) {
+                        html.push(`<pre><code>${escapeHtml(codeLines.join('\n'))}</code></pre>`);
+                        codeLines = []; inCode = false;
+                    } else { closeLists(); closeTable(); inCode = true; }
+                    return;
+                }
+                if (inCode) { codeLines.push(line); return; }
+
+                const trimmed = line.trim();
+                if (!trimmed) { closeLists(); closeTable(); return; }
+
+                if (/^\|(.+)\|$/.test(trimmed)) {
+                    closeLists();
+                    const cells = trimmed.slice(1, -1).split('|').map(cell => inlineMarkdown(cell.trim()));
+                    if (cells.every(cell => /^:?-{3,}:?$/.test(cell))) return;
+                    if (!inTable) { html.push('<table><tbody>'); inTable = true; tableHasHeader = false; }
+                    const tag = tableHasHeader ? 'td' : 'th';
+                    tableHasHeader = true;
+                    html.push(`<tr>${cells.map(cell => `<${tag}>${cell}</${tag}>`).join('')}</tr>`);
+                    return;
+                }
+                closeTable();
+
+                const rawVideo = trimmed.match(/^<video\s+src=["']([^"']+)["']\s+controls><\/video>$/i);
+                if (rawVideo && /^(blob:|https?:|data:video\/)/i.test(rawVideo[1])) {
+                    closeLists(); html.push(`<video src="${escapeHtml(rawVideo[1])}" controls></video>`); return;
+                }
+
+                const heading = trimmed.match(/^(#{1,6})\s+(.+)$/);
+                if (heading) {
+                    closeLists();
+                    const level = heading[1].length;
+                    html.push(`<h${level}>${inlineMarkdown(heading[2])}</h${level}>`);
+                    return;
+                }
+                if (/^>\s?/.test(trimmed)) {
+                    closeLists(); html.push(`<blockquote>${inlineMarkdown(trimmed.replace(/^>\s?/, ''))}</blockquote>`); return;
+                }
+                if (/^[-*+]\s+/.test(trimmed)) {
+                    if (!inUl) { closeLists(); html.push('<ul>'); inUl = true; }
+                    html.push(`<li>${inlineMarkdown(trimmed.replace(/^[-*+]\s+/, ''))}</li>`); return;
+                }
+                if (/^\d+\.\s+/.test(trimmed)) {
+                    if (!inOl) { closeLists(); html.push('<ol>'); inOl = true; }
+                    html.push(`<li>${inlineMarkdown(trimmed.replace(/^\d+\.\s+/, ''))}</li>`); return;
+                }
+                closeLists(); html.push(`<p>${inlineMarkdown(trimmed)}</p>`);
+            });
+
+            if (inCode) html.push(`<pre><code>${escapeHtml(codeLines.join('\n'))}</code></pre>`);
+            closeLists(); closeTable();
+            return html.join('\n');
+        }
+
+        // --- 统一渲染与状态 ---
+        function renderPreview() {
+            const text = document.getElementById('markdownInput').value;
+            document.getElementById('previewPane').innerHTML = renderMarkdown(text);
+            updateStats();
+        }
+
+        function getTextarea() { return document.getElementById('markdownInput'); }
+
+        function insertAtCursor(text) {
+            const area = getTextarea();
+            const start = area.selectionStart;
+            const end = area.selectionEnd;
+            area.value = area.value.slice(0, start) + text + area.value.slice(end);
+            area.focus();
+            area.selectionStart = area.selectionEnd = start + text.length;
+            return handleInput();
+        }
+
+        function wrapSelection(prefix, suffix) {
+            const area = getTextarea();
+            const start = area.selectionStart;
+            const end = area.selectionEnd;
+            const selected = area.value.slice(start, end) || '文本';
+            const next = prefix + selected + suffix;
+            area.value = area.value.slice(0, start) + next + area.value.slice(end);
+            area.focus();
+            area.selectionStart = start + prefix.length;
+            area.selectionEnd = start + prefix.length + selected.length;
+            handleInput();
+        }
+
+        function wrapLine(prefix, suffix) {
+            const area = getTextarea();
+            const lineStart = area.value.lastIndexOf('\n', area.selectionStart - 1) + 1;
+            area.value = area.value.slice(0, lineStart) + prefix + area.value.slice(lineStart) + suffix;
+            area.focus();
+            area.selectionStart = area.selectionEnd = lineStart + prefix.length;
+            handleInput();
+        }
+
+        // --- AI API 调用逻辑 ---
+        async function runAiEdit(mode) {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const model = document.getElementById('modelName').value.trim() || 'deepseek-v4-flash';
+            const doc = getTextarea().value.trim();
+            const instruction = document.getElementById('aiInstruction').value;
+            const customInstruction = document.getElementById('customInstruction').value.trim();
+            const status = document.getElementById('aiStatus');
+            const buttons = [document.getElementById('aiReplaceBtn'), document.getElementById('aiAppendBtn')];
+
+            if (!apiKey) { alert('请先填写 API Key'); return; }
+            if (!doc) { alert('请先输入内容'); return; }
+
+            buttons.forEach(btn => btn.disabled = true);
+            status.innerText = '引擎解析处理中...';
+            saveSettings();
+
+            try {
+                const data = await requestChatCompletion([
+                    { role: 'system', content: '你是专业的文档排版与处理助手。直接输出修改后的结果内容，严禁输出任何寒暄或废话。除非用户文本当中本身包含 markdown 代码块包裹，否则你绝对不要使用代码围栏包裹你的回复全文。' },
+                    { role: 'user', content: instruction + '\n' + (customInstruction ? '补充要求：' + customInstruction + '\n' : '') + '\n---\n' + doc }
+                ], 8192);
+
+                let result = data.choices?.[0]?.message?.content?.trim();
+
+                // 去除可能被大模型错误包裹的代码块标记
+                if(result && result.startsWith('```') && result.endsWith('```')){
+                    result = result.replace(/^```[\w-]*\n/, '').replace(/\n```$/, '');
+                }
+
+                if (!result) throw new Error('API 未返回有效内容');
+
+                if (mode === 'replace') getTextarea().value = result;
+                else getTextarea().value += `\n\n---\n\n${result}`;
+
+                handleInput();
+                status.innerText = `完成：耗费 ${data.usage?.total_tokens || '未知'} Tokens`;
+            } catch (err) {
+                status.innerText = `失败：${err.message}`;
+                alert(`模型处理失败：${err.message}`);
+            } finally {
+                buttons.forEach(btn => btn.disabled = false);
+            }
+        }
+
+        function getChatApiEndpoint() {
+            const raw = (document.getElementById('apiBaseUrl').value.trim() || 'https://api.poixe.com/v1');
+            let url;
+            try { url = new URL(raw); } catch (error) {
+                throw new Error('API URL 必须是完整的 http:// 或 https:// 地址。');
+            }
+            if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+                throw new Error('API URL 仅支持 HTTP 或 HTTPS。');
+            }
+            url.hash = '';
+            const path = url.pathname.replace(/\/+$/, '');
+            if (/\/chat\/completions$/i.test(path)) {
+                url.pathname = path;
+            } else if (/\/v\d+$/i.test(path)) {
+                url.pathname = path + '/chat/completions';
+            } else {
+                url.pathname = path + '/v1/chat/completions';
+            }
+            return url.toString();
+        }
+
+        async function requestChatCompletion(messages, maxTokens, timeoutMs) {
+            const model = document.getElementById('modelName').value.trim() || 'deepseek-v4-flash';
+            const limit = Number(maxTokens) || 8192;
+            const timeout = Number(timeoutMs) || 90000;
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), timeout);
+            try {
+                const response = await fetch(getChatApiEndpoint(), {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + document.getElementById('apiKey').value.trim(),
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ model: model, messages: messages, max_tokens: limit, stream: false }),
+                    signal: controller.signal
+                });
+                const raw = await response.text();
+                let data = {};
+                if (raw) {
+                    try { data = JSON.parse(raw); } catch (error) {
+                        throw new Error('API 返回的不是 JSON（HTTP ' + response.status + '）：' + raw.slice(0, 220));
+                    }
+                }
+                if (!response.ok) {
+                    const errorData = data.error || {};
+                    const message = (typeof errorData === 'string' ? errorData : errorData.message) || data.message || ('HTTP ' + response.status);
+                    const hints = {
+                        401: '请检查 API Key 是否正确。',
+                        403: 'Key 可能无权限、额度不足或账号受限。',
+                        404: '请检查 API URL 和模型路由是否正确。',
+                        429: '服务商限流或账户额度已用完。',
+                        502: '上游模型服务可能暂时不可用。',
+                        503: '服务商暂时不可用，请稍后重试。'
+                    };
+                    throw new Error('HTTP ' + response.status + '：' + message + (hints[response.status] ? ' ' + hints[response.status] : ''));
+                }
+                return data;
+            } catch (error) {
+                if (error && error.name === 'AbortError') {
+                    throw new Error('API 请求超过 ' + Math.round(timeout / 1000) + ' 秒，已自动停止等待。');
+                }
+                if (error instanceof TypeError) {
+                    throw new Error('网络连接失败或浏览器跨域（CORS）拦截：' + (error.message || 'Failed to fetch') + '。请检查服务商状态、API URL 和网络。');
+                }
+                throw error;
+            } finally {
+                clearTimeout(timer);
+            }
+        }
+
+        function renderChatLog() {
+            const log = document.getElementById('chatLog');
+            log.innerHTML = '';
+            if (!chatHistory.length) {
+                const empty = document.createElement('div');
+                empty.className = 'chat-empty';
+                empty.textContent = '对话内容会显示在这里。回答可一键插入 Markdown。';
+                log.appendChild(empty);
+                return;
+            }
+            chatHistory.forEach(message => {
+                const item = document.createElement('div');
+                item.className = 'chat-message ' + (message.role === 'user' ? 'user' : 'assistant');
+                item.textContent = (message.role === 'user' ? '你：\n' : 'AI：\n') + message.content;
+                log.appendChild(item);
+            });
+            log.scrollTop = log.scrollHeight;
+        }
+
+        async function sendChatPrompt() {
+            const input = document.getElementById('chatPrompt');
+            const prompt = input.value.trim();
+            const key = document.getElementById('apiKey').value.trim();
+            const model = document.getElementById('modelName').value.trim() || 'deepseek-v4-flash';
+            const status = document.getElementById('chatStatus');
+            const sendButton = document.getElementById('chatSendBtn');
+            if (!prompt) { status.textContent = '请先输入对话内容。'; return; }
+            if (!key) { status.textContent = '请先填写上方对话 API Key。'; return; }
+            const userMessage = { role: 'user', content: prompt };
+            chatHistory.push(userMessage);
+            input.value = '';
+            renderChatLog();
+            sendButton.disabled = true;
+            status.textContent = '正在请求 ' + model + ' …';
+            try {
+                saveSettings();
+                const data = await requestChatCompletion(
+                    [{ role: 'system', content: '你是一个准确、清晰的 AI 助手。请直接回答用户问题。' }].concat(chatHistory.slice(-16)),
+                    8192
+                );
+                const content = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+                const reply = Array.isArray(content) ? content.map(part => part.text || '').join('') : String(content || '').trim();
+                if (!reply) throw new Error('API 未返回有效文本。');
+                chatHistory.push({ role: 'assistant', content: reply });
+                lastChatReply = reply;
+                document.getElementById('chatInsertBtn').disabled = false;
+                renderChatLog();
+                status.textContent = '完成 · ' + (data.usage && data.usage.total_tokens ? data.usage.total_tokens + ' Tokens' : model);
+            } catch (error) {
+                const index = chatHistory.lastIndexOf(userMessage);
+                if (index >= 0) chatHistory.splice(index, 1);
+                input.value = prompt;
+                renderChatLog();
+                status.textContent = '请求失败：' + (error.message || error) + '。已保留输入，可修改后重试。';
+            } finally {
+                sendButton.disabled = false;
+            }
+        }
+
+                async function testChatApi() {
+            const button = document.getElementById('chatTestBtn');
+            const status = document.getElementById('chatStatus');
+            const key = document.getElementById('apiKey').value.trim();
+            if (!key) {
+                status.textContent = '请先填写对话 API Key。';
+                return;
+            }
+            button.disabled = true;
+            button.textContent = '测试中…';
+            status.textContent = '正在测试 API 地址、密钥和模型…';
+            try {
+                const data = await requestChatCompletion(
+                    [{ role: 'user', content: 'Reply with OK only.' }],
+                    8,
+                    30000
+                );
+                const content = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+                if (!content) throw new Error('接口已响应，但没有返回有效文本。');
+                status.textContent = '连接成功 · ' + (document.getElementById('modelName').value.trim() || '当前模型');
+            } catch (error) {
+                status.textContent = '连接失败：' + (error.message || String(error));
+            } finally {
+                button.disabled = false;
+                button.textContent = '测试 API 连接';
+            }
+        }
+
+        function initChatUI() {
+            document.getElementById('chatSendBtn').addEventListener('click', sendChatPrompt);
+            document.getElementById('chatTestBtn').addEventListener('click', testChatApi);
+            document.getElementById('chatInsertBtn').addEventListener('click', () => {
+                if (lastChatReply) insertAtCursor('\n\n' + lastChatReply + '\n\n');
+            });
+            document.getElementById('chatClearBtn').addEventListener('click', () => {
+                chatHistory = [];
+                lastChatReply = '';
+                document.getElementById('chatInsertBtn').disabled = true;
+                document.getElementById('chatStatus').textContent = '对话已清空。';
+                renderChatLog();
+            });
+            document.getElementById('chatPrompt').addEventListener('keydown', event => {
+                if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+                    event.preventDefault();
+                    sendChatPrompt();
+                }
+            });
+            renderChatLog();
+        }
+
+        function safeStorageGet(key) {
+            try { return localStorage.getItem(key) || ''; } catch (error) { return ''; }
+        }
+
+        function safeStorageSet(key, value) {
+            try {
+                localStorage.setItem(key, value);
+                return true;
+            } catch (error) {
+                return false;
+            }
+        }
+
+        function safeStorageRemove(key) {
+            try { localStorage.removeItem(key); } catch (error) {}
+        }
+
+        const IMAGE_SPACE_ID = 'assembledchaos/qwen-image-2-1-studio';
+        const IMAGE_API_DEFAULT = 'https://api.apimart.ai';
+        let activeImageModel = 'gpt';
+        let imageSourceBlob = null;
+        let imageSourceObjectUrl = '';
+        let imageSourceName = '';
+        let imageResultUrl = '';
+        let imageRunning = false;
+        let activeImageTaskId = '';
+
+        function updateImagePromptCount() {
+            const count = document.getElementById('imagePrompt').value.length;
+            document.getElementById('imagePromptCount').textContent = count.toLocaleString('zh-CN') + ' 字';
+        }
+
+        function imageStatus(message, type) {
+            const box = document.getElementById('imageStatus');
+            box.textContent = message;
+            box.className = 'image-status' + (type ? ' ' + type : '');
+        }
+
+        function normalizeImageBase(value) {
+            const raw = String(value || IMAGE_API_DEFAULT).trim();
+            let url;
+            try { url = new URL(raw); } catch (error) {
+                throw new Error('图像 API Base URL 必须是完整的 http:// 或 https:// 地址。');
+            }
+            if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+                throw new Error('图像 API Base URL 仅支持 HTTP 或 HTTPS。');
+            }
+            url.hash = '';
+            url.pathname = url.pathname.replace(/\/v1(?:\/.*)?$/i, '').replace(/\/+$/, '');
+            return url.origin + url.pathname;
+        }
+
+        function getImageTaskMode() {
+            const selected = document.getElementById('imageTaskMode').value;
+            return selected === 'auto' ? (imageSourceBlob ? 'edit' : 'create') : selected;
+        }
+
+        function updateImageTaskLabel() {
+            const mode = getImageTaskMode();
+            document.getElementById('generateImageBtn').textContent = mode === 'edit' ? '开始改图' : mode === 'transparent' ? '生成透明 PNG' : '生成图片';
+        }
+
+        function updateImageModel() {
+            activeImageModel = document.getElementById('imageModel').value;
+            document.getElementById('imageGptSettings').hidden = activeImageModel !== 'gpt';
+            document.getElementById('imageQwenSettings').hidden = activeImageModel !== 'qwen';
+            document.getElementById('imageTransparentOption').hidden = activeImageModel !== 'qwen';
+            document.getElementById('imageResolutionGroup').hidden = activeImageModel !== 'gpt';
+            if (activeImageModel !== 'gpt') document.getElementById('imageTaskWrap').hidden = true;
+            else if (activeImageTaskId) document.getElementById('imageTaskWrap').hidden = false;
+            if (activeImageModel === 'gpt' && document.getElementById('imageTaskMode').value === 'transparent') {
+                document.getElementById('imageTaskMode').value = 'auto';
+            }
+            updateImageTaskLabel();
+            saveImageSettings();
+        }
+
+        function saveImageSettings() {
+            safeStorageSet(STORAGE_KEYS.imageModel, document.getElementById('imageModel').value);
+            safeStorageSet(STORAGE_KEYS.imageApiBaseUrl, document.getElementById('imageApiBaseUrl').value.trim());
+            safeStorageSet(STORAGE_KEYS.imageModelId, document.getElementById('imageModelId').value.trim());
+            safeStorageSet(STORAGE_KEYS.imageResolution, document.getElementById('imageResolution').value);
+            safeStorageSet(STORAGE_KEYS.imageAspect, document.getElementById('imageAspect').value);
+            safeStorageSet(STORAGE_KEYS.qwenSteps, document.getElementById('qwenSteps').value);
+            safeStorageSet(STORAGE_KEYS.qwenSeed, document.getElementById('qwenSeed').value);
+            if (document.getElementById('rememberImageKey').checked) {
+                safeStorageSet('cpuck_image_api_key', document.getElementById('imageApiKey').value.trim());
+            } else {
+                safeStorageRemove('cpuck_image_api_key');
+                safeStorageRemove('tcq_html_imageApiKey');
+            }
+            if (document.getElementById('rememberHfToken').checked) {
+                safeStorageSet('cpuck_image_hf_token', document.getElementById('hfToken').value.trim());
+            } else {
+                safeStorageRemove('cpuck_image_hf_token');
+                safeStorageRemove('tcq_html_hfApiKey');
+            }
+        }
+
+        function setImageSource(blob, name) {
+            if (!blob) return;
+            if (imageSourceObjectUrl) URL.revokeObjectURL(imageSourceObjectUrl);
+            imageSourceBlob = blob;
+            imageSourceName = name || '参考图片';
+            imageSourceObjectUrl = URL.createObjectURL(blob);
+            document.getElementById('imageSourceThumb').src = imageSourceObjectUrl;
+            document.getElementById('imageSourceInfo').textContent = imageSourceName + ' · ' + (blob.size / 1048576).toFixed(2) + ' MB';
+            document.getElementById('imageSourcePreview').classList.add('show');
+            document.getElementById('insertSourceImageBtn').disabled = false;
+            updateImageTaskLabel();
+        }
+
+        function clearImageSource() {
+            if (imageSourceObjectUrl) URL.revokeObjectURL(imageSourceObjectUrl);
+            imageSourceObjectUrl = '';
+            imageSourceBlob = null;
+            imageSourceName = '';
+            document.getElementById('imageInput').value = '';
+            document.getElementById('imageSourcePreview').classList.remove('show');
+            document.getElementById('imageSourceThumb').removeAttribute('src');
+            document.getElementById('insertSourceImageBtn').disabled = true;
+            updateImageTaskLabel();
+        }
+
+        async function imageJpegData(blob) {
+            if (!blob) throw new Error('请先上传参考图片。');
+            const objectUrl = URL.createObjectURL(blob);
+            try {
+                const image = new Image();
+                await new Promise((resolve, reject) => {
+                    image.onload = resolve;
+                    image.onerror = () => reject(new Error('参考图片无法读取。'));
+                    image.src = objectUrl;
+                });
+                const ratio = Math.min(1, 1536 / Math.max(image.naturalWidth, image.naturalHeight));
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.max(1, Math.round(image.naturalWidth * ratio));
+                canvas.height = Math.max(1, Math.round(image.naturalHeight * ratio));
+                const context = canvas.getContext('2d');
+                if (!context) throw new Error('无法创建图片画布。');
+                context.fillStyle = '#fff';
+                context.fillRect(0, 0, canvas.width, canvas.height);
+                context.drawImage(image, 0, 0, canvas.width, canvas.height);
+                return canvas.toDataURL('image/jpeg', 0.85);
+            } finally {
+                URL.revokeObjectURL(objectUrl);
+            }
+        }
+
+        async function imageBlobDataUrl(blob) {
+            if (!blob || !/^image\//i.test(blob.type || '')) throw new Error('读取对象不是有效图片。');
+            return await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const value = reader.result;
+                    if (typeof value === 'string' && /^data:image\//i.test(value)) resolve(value);
+                    else reject(new Error('图片数据读取失败。'));
+                };
+                reader.onerror = () => reject(new Error('浏览器无法读取该图片文件。'));
+                reader.readAsDataURL(blob);
+            });
+        }
+
+        function markdownImageAlt(name) {
+            return String(name || '图片')
+                .replace(/[\r\n\[\]()]/g, '-')
+                .replace(/\\/g, '-')
+                .trim() || '图片';
+        }
+
+        async function insertSourceImageIntoMarkdown() {
+            if (!imageSourceBlob) {
+                imageStatus('请先选择一张图片。', 'error');
+                return;
+            }
+            const button = document.getElementById('insertSourceImageBtn');
+            button.disabled = true;
+            button.textContent = '图片处理中…';
+            try {
+                const dataUrl = await imageBlobDataUrl(imageSourceBlob);
+                const saved = insertAtCursor('\n![' + markdownImageAlt(imageSourceName) + '](' + dataUrl + ')\n');
+                if (saved === false) {
+                    imageStatus('图片已插入 Markdown，但文档较大，浏览器本地缓存可能已满；请立即导出 MD 备份。', 'error');
+                } else {
+                    imageStatus('原图已完整嵌入 Markdown，保留原格式且无需图床链接；可继续使用同一张图进行 AI 编辑。', 'success');
+                }
+            } catch (error) {
+                imageStatus('原图插入失败：' + (error.message || error), 'error');
+            } finally {
+                button.disabled = !imageSourceBlob;
+                button.textContent = '插入原图到 MD';
+            }
+        }
+
+        async function imageApiJson(url, options) {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 60000);
+            let response;
+            let raw = '';
+            try {
+                response = await fetch(url, Object.assign({}, options || {}, { signal: controller.signal }));
+                raw = await response.text();
+            } catch (error) {
+                if (error && error.name === 'AbortError') {
+                    throw new Error('图像 API 请求超过 60 秒，已自动停止等待。');
+                }
+                throw new Error('网络或跨域访问失败：' + (error.message || error) + '。请检查网络、API 地址和服务商 CORS 设置。');
+            } finally {
+                clearTimeout(timer);
+            }
+
+            let data;
+            try { data = JSON.parse(raw); } catch (error) {
+                throw new Error('接口返回非 JSON（HTTP ' + response.status + '）：' + raw.slice(0, 220));
+            }
+            const payload = data && typeof data === 'object' ? data : {};
+            if (!response.ok) {
+                const err = payload.error || (payload.data && payload.data.error);
+                const message = typeof err === 'string' ? err : (err && err.message) || payload.message || raw.slice(0, 250) || '接口未提供错误详情';
+                if (response.status === 403 && /quota is not enough|token quota|insufficient.*(balance|quota)|quota.*(balance|insufficient)/i.test(String(message))) {
+                    throw new Error('APIMart 返回 HTTP 403：API Key 的 Token 额度或账户余额不足。');
+                }
+                const hints = {
+                    401: '请检查 APIMart API Key。',
+                    403: '请检查账户余额、Token 额度和模型权限。',
+                    404: '请检查 API 地址和模型 ID。',
+                    429: '服务商限流或账户额度已用完。',
+                    502: '上游图像服务可能暂时不可用。',
+                    503: 'APIMart 暂时不可用，请稍后重试。'
+                };
+                throw new Error('HTTP ' + response.status + '：' + message + (hints[response.status] ? ' ' + hints[response.status] : ''));
+            }
+            return payload;
+        }
+
+        function getGeneratedImageUrl(data) {
+            const item = Array.isArray(data && data.data) ? data.data[0] : (data && data.data) || data || {};
+            const values = [
+                item.url, item.image_url, item.b64_json,
+                item.result && item.result.url, item.result && item.result.image_url,
+                item.result && item.result.images && item.result.images[0] && item.result.images[0].url,
+                item.result && item.result.images && item.result.images[0] && item.result.images[0].b64_json,
+                item.images && item.images[0] && item.images[0].url,
+                item.images && item.images[0] && item.images[0].b64_json,
+                data && data.url, data && data.image_url
+            ];
+            for (let value of values) {
+                if (Array.isArray(value)) value = value.find(itemValue => typeof itemValue === 'string' && itemValue.length);
+                if (typeof value === 'string' && (/^https?:\/\//i.test(value) || /^data:image\//i.test(value))) return value;
+                if (typeof value === 'string' && value.length > 100 && /^[A-Za-z0-9+/=]+$/.test(value)) return 'data:image/png;base64,' + value;
+            }
+            return '';
+        }
+
+        function getGeneratedTaskId(data) {
+            const item = Array.isArray(data && data.data) ? data.data[0] : (data && data.data) || data || {};
+            return item.task_id || item.id || data.task_id || data.id || '';
+        }
+
+        function imageTaskPayload(data) {
+            return Array.isArray(data && data.data) ? data.data[0] : (data && data.data) || data || {};
+        }
+
+        const imageSleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+        function rememberImageTask(id) {
+            if (!id) return;
+            activeImageTaskId = id;
+            document.getElementById('imageTaskId').value = id;
+            document.getElementById('imageTaskWrap').hidden = false;
+            safeStorageSet('cpuck_last_gpt_task_id', id);
+        }
+
+        async function pollImageTask(base, key, id, options) {
+            const max = (options && options.maxAttempts) || 180;
+            const firstDelay = options && options.firstDelay !== undefined ? options.firstDelay : 0;
+            for (let index = 0; index < max; index++) {
+                await imageSleep(index === 0 ? firstDelay : 4000);
+                const data = await imageApiJson(base + '/v1/tasks/' + encodeURIComponent(id), {
+                    headers: { 'Authorization': 'Bearer ' + key }
+                });
+                const item = imageTaskPayload(data);
+                const state = String(item.status || data.status || '').toLowerCase();
+                const url = getGeneratedImageUrl(data);
+                imageStatus('GPT Image 2 任务查询 · ' + (state || '等待状态') + ' · ' + (index + 1) + '/' + max);
+                if (['completed', 'success', 'succeeded', 'finished'].includes(state)) {
+                    if (url) return url;
+                    throw new Error('任务已完成，但接口没有返回可识别的图片地址。任务 ID：' + id);
+                }
+                if (['error', 'failed', 'cancelled', 'canceled'].includes(state)) {
+                    const errorMessage = item.error && (item.error.message || item.error) || data.error && (data.error.message || data.error) || item.message || state;
+                    throw new Error('后台任务失败：' + (typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage)));
+                }
+            }
+            throw new Error('任务仍未返回最终图片。任务 ID：' + id + '。可稍后使用“查询任务”继续获取。');
+        }
+
+        async function runGptImage() {
+            const key = document.getElementById('imageApiKey').value.trim();
+            const prompt = document.getElementById('imagePrompt').value.trim();
+            const mode = getImageTaskMode();
+            const base = normalizeImageBase(document.getElementById('imageApiBaseUrl').value);
+            const model = document.getElementById('imageModelId').value.trim() || 'gpt-image-2-ext';
+            if (!key) throw new Error('请填写 APIMart API Key。');
+            if (!prompt) throw new Error('请先输入图像提示词或编辑指令。');
+            if (mode === 'edit' && !imageSourceBlob) throw new Error('图像编辑模式需要先上传参考图片。');
+
+            const body = {
+                model: model,
+                prompt: prompt,
+                n: 1,
+                resolution: document.getElementById('imageResolution').value,
+                size: document.getElementById('imageAspect').value,
+                official_fallback: true
+            };
+            if (mode === 'edit') {
+                imageStatus('正在处理参考图并准备提交…');
+                const referenceData = await imageJpegData(imageSourceBlob);
+                if (!referenceData || !referenceData.startsWith('data:image/')) throw new Error('参考图转换失败。');
+                body.image_urls = [referenceData];
+            }
+            if (document.getElementById('rememberImageKey').checked) {
+                safeStorageSet('cpuck_image_api_key', key);
+                safeStorageSet('cpuck_image_api_base', base);
+            }
+            const data = await imageApiJson(base + '/v1/images/generations', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            let url = getGeneratedImageUrl(data);
+            const taskId = getGeneratedTaskId(data);
+            if (taskId) rememberImageTask(taskId);
+            if (url) {
+                showGeneratedImage(url, 'GPT Image 2');
+                return;
+            }
+            if (!taskId) throw new Error('接口没有返回图片链接或任务 ID：' + JSON.stringify(data).slice(0, 350));
+            imageStatus('任务已提交，ID：' + taskId + '。正在等待后台生成…');
+            url = await pollImageTask(base, key, taskId, { firstDelay: 12000, maxAttempts: 180 });
+            showGeneratedImage(url, 'GPT Image 2');
+        }
+
+        function findQwenImage(value) {
+            const queue = [value];
+            const seen = new Set();
+            while (queue.length) {
+                const item = queue.shift();
+                if (!item) continue;
+                if (typeof item === 'string') {
+                    if (/^https?:\/\//i.test(item) || /^data:image\//i.test(item)) return item;
+                    continue;
+                }
+                if (typeof item !== 'object' || seen.has(item)) continue;
+                seen.add(item);
+                if (!Array.isArray(item)) {
+                    if (typeof item.url === 'string' && /^https?:\/\//i.test(item.url)) return item.url;
+                    if (item.image && typeof item.image.url === 'string') return item.image.url;
+                    ['data', 'image', 'images', 'value', 'output', 'files', 'gallery'].forEach(key => {
+                        if (item[key]) queue.push(item[key]);
+                    });
+                } else {
+                    item.forEach(child => queue.push(child));
+                }
+            }
+            return '';
+        }
+
+        function buildQwenInputs(parameters, prompt, modeText, reference, ratio, steps, seed, random) {
+            const fallback = [prompt, modeText, reference, ratio, steps, seed, random];
+            if (!Array.isArray(parameters) || !parameters.length) return fallback;
+            return parameters.map((parameter, i) => {
+                const name = String(parameter.parameter_name || parameter.label || parameter.name || parameter.component || '').toLowerCase();
+                if (/additional|extra|gallery|multiple.references/.test(name)) return [];
+                if (/prompt|instruction/.test(name)) return prompt;
+                if (/mode|task/.test(name)) return modeText;
+                if (/reference|image|photo|upload/.test(name)) return reference;
+                if (/aspect|ratio|size/.test(name)) return ratio;
+                if (/steps|step/.test(name)) return steps;
+                if (/seed/.test(name)) return seed;
+                if (/random|new.seed/.test(name)) return random;
+                return parameter.parameter_has_default ? parameter.parameter_default : (fallback[i] !== undefined ? fallback[i] : null);
+            });
+        }
+
+        function imageRatioLabel(value) {
+            const labels = {
+                '1:1': 'Square · 1:1', '16:9': 'Landscape · 16:9', '9:16': 'Portrait · 9:16',
+                '4:3': 'Landscape · 4:3', '3:4': 'Portrait · 3:4', '3:2': 'Landscape · 3:2',
+                '2:3': 'Portrait · 2:3', '21:9': 'Ultrawide · 21:9'
+            };
+            return labels[value] || 'Square · 1:1';
+        }
+
+        async function runQwenImage() {
+            const prompt = document.getElementById('imagePrompt').value.trim();
+            const mode = getImageTaskMode();
+            if (!prompt) throw new Error('请先输入图像提示词或编辑指令。');
+            const modeText = mode === 'edit' ? 'Edit an image' : mode === 'transparent' ? 'Transparent PNG' : 'Create an image';
+            if (modeText === 'Edit an image' && !imageSourceBlob) throw new Error('Qwen 图像编辑模式需要先上传参考图片。');
+            const token = document.getElementById('hfToken').value.trim();
+            if (token && document.getElementById('rememberHfToken').checked) safeStorageSet('cpuck_image_hf_token', token);
+
+            imageStatus('正在连接 Hugging Face Space…');
+            const module = await import('https://cdn.jsdelivr.net/npm/@gradio/client@2.8.0/dist/index.min.js');
+            const clientOptions = {
+                events: ['status', 'data'],
+                space_status: function (spaceStatus) {
+                    imageStatus('Hugging Face Space · ' + (spaceStatus.message || spaceStatus.status || '正在连接…'));
+                }
+            };
+            if (token) clientOptions.token = token;
+            const client = await module.Client.connect(IMAGE_SPACE_ID, clientOptions);
+            let info;
+            try {
+                info = await client.view_api();
+            } catch (error) {
+                throw new Error('已连接 Hugging Face Space，但读取 API 参数失败：' + (error.message || error));
+            }
+            const endpoints = info && info.named_endpoints ? info.named_endpoints : {};
+            const endpointKey = Object.keys(endpoints).find(key => /(^|\/)generate\/?$/i.test(key));
+            if (!endpointKey) {
+                throw new Error('Qwen Space 没有公开 generate 接口。当前接口：' + (Object.keys(endpoints).join(', ') || '无'));
+            }
+            const endpoint = endpointKey.charAt(0) === '/' ? endpointKey : '/' + endpointKey;
+            const parameters = endpoints[endpointKey] && endpoints[endpointKey].parameters;
+            if (!Array.isArray(parameters) || !parameters.length) {
+                throw new Error('Qwen Space 未返回 generate 接口参数，无法安全提交任务。');
+            }
+            const reference = modeText === 'Edit an image' ? module.handle_file(imageSourceBlob) : null;
+            const steps = Number(document.getElementById('qwenSteps').value) || 40;
+            const seed = Math.max(0, Math.min(2147483647, Number(document.getElementById('qwenSeed').value) || 42));
+            const random = document.getElementById('randomSeed').checked;
+            const inputs = buildQwenInputs(parameters, prompt, modeText, reference, imageRatioLabel(document.getElementById('imageAspect').value), steps, seed, random);
+            if (inputs.length !== parameters.length) {
+                throw new Error('Qwen API 参数数量不匹配：页面需要 ' + parameters.length + ' 项，实际生成 ' + inputs.length + ' 项。');
+            }
+
+            imageStatus('已连接 Qwen Space，正在提交任务…');
+            const job = client.submit(endpoint, inputs);
+            let finalData;
+            let lastStatus = null;
+            let dataEvents = 0;
+            for await (const update of job) {
+                if (!update) continue;
+                if (update.type === 'status') {
+                    lastStatus = update;
+                    imageStatus('Qwen Image 2.1 · ' + (update.stage || update.status || '排队 / 推理中') + (update.position != null ? ' · 队列 ' + update.position : ''));
+                    if (update.stage === 'error' || update.status === 'error' || update.success === false) {
+                        throw new Error('Qwen Space 任务失败：' + (update.message || update.code || '未提供错误详情'));
+                    }
+                } else if (update.type === 'data') {
+                    finalData = update.data;
+                    dataEvents += 1;
+                    imageStatus('Qwen Image 2.1 · 已收到生成结果，正在解析图片…');
+                }
+            }
+            if (finalData === undefined) {
+                throw new Error('Gradio 任务结束，但没有收到 data 结果事件。状态：' + JSON.stringify(lastStatus || {}) + '；data 事件数：' + dataEvents + '。请检查 Space 是否正常运行及 API 参数。');
+            }
+            const url = findQwenImage(finalData);
+            if (!url) throw new Error('Space 已返回 data 结果，但未识别到图片文件：' + JSON.stringify(finalData).slice(0, 500));
+            showGeneratedImage(url, 'Qwen Image 2.1');
+        }
+
+                function showGeneratedImage(url, modelName) {
+            imageResultUrl = url;
+            document.getElementById('imageResultImage').src = url;
+            document.getElementById('imageResultPreview').hidden = false;
+            document.getElementById('imageResultCaption').textContent = modelName + ' · ' + new Date().toLocaleString('zh-CN');
+            ['insertImageBtn', 'downloadImageBtn', 'useImageBtn'].forEach(id => { document.getElementById(id).disabled = false; });
+            imageStatus('生成完成。可以插入 Markdown、下载图片，或将结果作为下一次编辑的参考图。', 'success');
+        }
+
+        async function insertGeneratedImageIntoMarkdown() {
+            if (!imageResultUrl) return;
+            const button = document.getElementById('insertImageBtn');
+            button.disabled = true;
+            try {
+                const response = await fetch(imageResultUrl);
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                const blob = await response.blob();
+                if (!blob.type || !blob.type.startsWith('image/')) throw new Error('返回内容不是图片');
+                const dataUrl = await imageBlobDataUrl(blob);
+                const saved = insertAtCursor('\n![AI 生成图片](' + dataUrl + ')\n');
+                imageStatus(saved === false
+                    ? 'AI 图片已插入，但本地缓存空间可能不足；请立即导出 MD 备份。'
+                    : 'AI 生成图已完整嵌入 Markdown，可随 MD 一起保存。',
+                    saved === false ? 'error' : 'success');
+            } catch (error) {
+                // 部分图像服务不开放跨域读取：退回插入服务商图片 URL，不让用户丢失结果。
+                if (/^(https?:\/\/|data:image\/)/i.test(String(imageResultUrl))) {
+                    insertAtCursor('\n![AI 生成图片](' + imageResultUrl + ')\n');
+                    imageStatus('图片已按原始链接插入 Markdown；若服务商链接有时效，请同时下载图片备份。', 'success');
+                } else {
+                    imageStatus('AI 图片插入失败：' + (error.message || error), 'error');
+                }
+            } finally {
+                button.disabled = !imageResultUrl;
+            }
+        }
+
+        async function downloadGeneratedImage() {
+            if (!imageResultUrl) return;
+            try {
+                const response = await fetch(imageResultUrl);
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                const blob = await response.blob();
+                saveBlobAsFile(blob, 'AI_Image_' + Date.now() + '.png');
+            } catch (error) {
+                window.open(imageResultUrl, '_blank', 'noopener,noreferrer');
+                imageStatus('浏览器不允许跨域直接下载，已在新窗口打开图片；可在图片页面保存。', 'success');
+            }
+        }
+
+        async function useGeneratedImageAsSource() {
+            if (!imageResultUrl) return;
+            try {
+                const response = await fetch(imageResultUrl);
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                setImageSource(await response.blob(), '上一次生成的图片');
+                document.getElementById('imageTaskMode').value = 'edit';
+                updateImageTaskLabel();
+                imageStatus('已将生成结果设为参考图。输入新的编辑指令即可继续修改。', 'success');
+            } catch (error) {
+                imageStatus('无法读取结果图片（可能受跨域限制）。请先下载结果，再重新上传进行编辑。', 'error');
+            }
+        }
+
+        async function generateImage() {
+            if (imageRunning) return;
+            imageRunning = true;
+            activeImageTaskId = '';
+            document.getElementById('imageTaskWrap').hidden = true;
+            document.getElementById('generateImageBtn').disabled = true;
+            document.getElementById('generateImageBtn').textContent = '正在生成…';
+            imageStatus('正在准备请求…');
+            try {
+                if (activeImageModel === 'gpt') await runGptImage();
+                else await runQwenImage();
+            } catch (error) {
+                if (activeImageModel === 'gpt' && activeImageTaskId) {
+                    document.getElementById('imageTaskWrap').hidden = false;
+                    document.getElementById('imageTaskId').value = activeImageTaskId;
+                }
+                imageStatus(error.message || String(error), 'error');
+            } finally {
+                imageRunning = false;
+                document.getElementById('generateImageBtn').disabled = false;
+                updateImageTaskLabel();
+            }
+        }
+
+        function initImageGenerator() {
+            document.getElementById('imageModel').addEventListener('change', updateImageModel);
+            document.getElementById('imageTaskMode').addEventListener('change', updateImageTaskLabel);
+            document.getElementById('toggleChatKey').addEventListener('click', function () {
+                const field = document.getElementById('apiKey');
+                field.type = field.type === 'password' ? 'text' : 'password';
+                this.textContent = field.type === 'password' ? '显示' : '隐藏';
+            });
+            document.getElementById('toggleImageApiKey').addEventListener('click', function () {
+                const field = document.getElementById('imageApiKey');
+                field.type = field.type === 'password' ? 'text' : 'password';
+                this.textContent = field.type === 'password' ? '显示' : '隐藏';
+            });
+            document.getElementById('toggleHfToken').addEventListener('click', function () {
+                const field = document.getElementById('hfToken');
+                field.type = field.type === 'password' ? 'text' : 'password';
+                this.textContent = field.type === 'password' ? '显示' : '隐藏';
+            });
+            document.getElementById('imagePrompt').addEventListener('input', updateImagePromptCount);
+            updateImagePromptCount();
+            document.getElementById('generateImageBtn').addEventListener('click', generateImage);
+            document.getElementById('insertImageBtn').addEventListener('click', insertGeneratedImageIntoMarkdown);
+            document.getElementById('downloadImageBtn').addEventListener('click', downloadGeneratedImage);
+            document.getElementById('useImageBtn').addEventListener('click', useGeneratedImageAsSource);
+            document.getElementById('removeImageSource').addEventListener('click', clearImageSource);
+            document.getElementById('insertSourceImageBtn').addEventListener('click', insertSourceImageIntoMarkdown);
+            const imageInput = document.getElementById('imageInput');
+            const imageDrop = document.getElementById('imageUploadDrop');
+            const acceptImageFile = file => {
+                if (!file) return;
+                if (!file.type.startsWith('image/')) {
+                    imageStatus('请选择 PNG、JPG、WebP 等图片文件。', 'error');
+                    return;
+                }
+                setImageSource(file, file.name);
+                imageStatus('参考图片已载入。可选择图像编辑，或保持自动判断。');
+            };
+            imageInput.addEventListener('change', event => acceptImageFile(event.target.files && event.target.files[0]));
+            ['dragenter', 'dragover'].forEach(name => imageDrop.addEventListener(name, event => {
+                event.preventDefault();
+                imageDrop.classList.add('drag');
+            }));
+            ['dragleave', 'drop'].forEach(name => imageDrop.addEventListener(name, event => {
+                event.preventDefault();
+                imageDrop.classList.remove('drag');
+            }));
+            imageDrop.addEventListener('drop', event => {
+                const file = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
+                acceptImageFile(file);
+            });
+            document.getElementById('imagePrompt').addEventListener('input', saveImageSettings);
+            document.getElementById('imageApiKey').addEventListener('input', saveImageSettings);
+            document.getElementById('hfToken').addEventListener('input', saveImageSettings);
+            document.getElementById('rememberImageKey').addEventListener('change', saveImageSettings);
+            document.getElementById('rememberHfToken').addEventListener('change', saveImageSettings);
+            document.getElementById('queryImageTaskBtn').addEventListener('click', async function () {
+                if (imageRunning) return;
+                const key = document.getElementById('imageApiKey').value.trim();
+                const id = document.getElementById('imageTaskId').value.trim();
+                if (!key) { imageStatus('请先填写 APIMart API Key。', 'error'); return; }
+                if (!id) { imageStatus('请填写需要查询的 task ID。', 'error'); return; }
+                imageRunning = true;
+                this.disabled = true;
+                this.textContent = '查询中…';
+                try {
+                    const url = await pollImageTask(normalizeImageBase(document.getElementById('imageApiBaseUrl').value), key, id, { firstDelay: 0, maxAttempts: 180 });
+                    showGeneratedImage(url, 'GPT Image 2');
+                } catch (error) {
+                    imageStatus(error.message || String(error), 'error');
+                } finally {
+                    imageRunning = false;
+                    this.disabled = false;
+                    this.textContent = '查询';
+                }
+            });
+            updateImageModel();
+            updateImageTaskLabel();
+        }
+
+    </script>
+</body>
+</html>
