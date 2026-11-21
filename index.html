@@ -3,6 +3,7 @@
 <head>
 <meta name="description" content="AI 对话、图像生成与 Markdown 编辑预览工作台。">
 <meta name="referrer" content="strict-origin-when-cross-origin">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1964437526797765" crossorigin="anonymous"></script>
 <script>
 (function () {
   function memStore() {
@@ -242,6 +243,22 @@
         .image-settings a{color:#7dd3fc;text-decoration:none}
         .image-settings a:hover{text-decoration:underline}
         @media(max-width:980px){.key-toggle{flex-basis:48px;min-width:48px}.image-upload-drop{padding:8px}}
+        .sidebar-ad{margin:0 0 16px;padding:8px;border:1px solid var(--border-light);border-radius:13px;background:rgba(0,0,0,.18);overflow:hidden;min-height:270px}
+        .sidebar-ad-label{font-size:.68rem;color:var(--text-tertiary);text-align:center;letter-spacing:.12em;margin:0 0 5px}
+        .sidebar-ad .adsbygoogle{display:block;width:100%;min-height:250px}
+        .analysis-result{margin-top:10px;padding:11px;border:1px solid var(--border-light);border-radius:12px;background:rgba(0,0,0,.22)}
+        .analysis-result[hidden]{display:none!important}
+        .analysis-result-title{font-size:.76rem;font-weight:800;color:#c4b5fd;margin-bottom:7px}
+        .analysis-result-text{font-size:.8rem;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--text-primary);max-height:360px;overflow:auto}
+        .image-insert-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+        .image-insert-actions .btn{min-width:0;padding:0 8px;font-size:.76rem}
+        .home-btn{color:#7dd3fc;text-decoration:none;margin-left:4px}
+        .home-btn:hover{color:#fff}
+        @media(max-width:980px){
+            .sidebar-ad{min-height:250px}
+            .image-insert-actions{grid-template-columns:1fr 1fr}
+            .topbar .home-btn{margin-left:auto}
+        }
 
 </style>
 </head>
@@ -249,23 +266,72 @@
     <div class="workspace">
 
         <aside class="panel" id="sidePanel">
+            <div class="panel-scroll">
+                <div class="sidebar-ad" aria-label="Google AdSense 广告">
+                    <div class="sidebar-ad-label">广告</div>
+                    <ins class="adsbygoogle"
+                         style="display:block;width:100%;min-height:250px"
+                         data-ad-client="ca-pub-1964437526797765"
+                         data-ad-slot="1907914008"
+                         data-ad-format="auto"
+                         data-full-width-responsive="true"></ins>
+                    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+                </div>
 
+                <div class="workspace-section-title">图片工作区</div>
+                <div class="form-group">
+                    <label for="imageInput">📷 上传图片（顶部统一入口）</label>
+                    <div class="image-upload-drop" id="imageUploadDrop">
+                        <input id="imageInput" class="glass-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif">
+                        <p class="small">选择或拖入图片；同一张图可用于 AI 改图、模型分析和 Markdown 插入。</p>
+                    </div>
+                    <div class="image-source" id="imageSourcePreview">
+                        <img id="imageSourceThumb" alt="参考图预览">
+                        <div class="image-source-info" id="imageSourceInfo">参考图片已载入</div>
+                        <button class="btn secondary" id="removeImageSource" type="button">移除</button>
+                    </div>
+                    <div class="actions" style="margin-top:8px">
+                        <button class="btn secondary" id="insertSourceImageBtn" type="button" disabled>原图插入 MD</button>
+                        <button class="btn purple" id="quickEditImageBtn" type="button">AI 改图</button>
+                    </div>
+                </div>
 
-   <div class="form-group">
+                <div class="workspace-section-title">模型分析图</div>
+                <div class="form-group">
+                    <label for="imageAnalysisPrompt">分析要求</label>
+                    <textarea id="imageAnalysisPrompt" class="glass-input" rows="3">请用中文详细分析这张图片，包括主体与场景、构图与视角、光线和色彩、可辨认文字、图像质量及明显异常。对无法确认的信息请明确说明，不要臆测。</textarea>
+                    <div class="chat-actions">
+                        <button class="btn" id="analyzeImageBtn" type="button">🔍 模型分析图</button>
+                        <button class="btn secondary" id="insertImageAnalysisBtn" type="button" disabled>插入分析到 MD</button>
+                    </div>
+                    <div id="imageAnalysisStatus" class="image-status">使用上方对话 API 模型分析已上传图片；请确保所选模型支持视觉输入。</div>
+                    <div id="imageAnalysisResult" class="analysis-result" hidden>
+                        <div class="analysis-result-title">图片分析结果</div>
+                        <div id="imageAnalysisText" class="analysis-result-text"></div>
+                    </div>
+                </div>
+
+                <div class="divider"></div>
+                <div class="workspace-section-title">语音朗读</div>
+                <div class="form-group">
+                    <button class="btn secondary full" id="ttsToggleBtn" type="button">🔊 语音朗读</button>
+                    <p class="small" id="ttsStatus" style="margin-top:7px">朗读当前 Markdown 文档；使用浏览器本地中文语音，不上传文档。</p>
+                </div>
+
+                <div class="divider"></div>
+                <div class="workspace-section-title">查找与替换</div>
+                <div class="form-group">
                     <label>🔍 查找与替换</label>
-                    <input type="text" id="findInput" class="glass-input" placeholder="查找内容 (支持正则)" style="margin-bottom: 8px;">
+                    <input type="text" id="findInput" class="glass-input" placeholder="查找内容 (支持正则)" style="margin-bottom:8px">
                     <input type="text" id="replaceInput" class="glass-input" placeholder="替换为...">
                 </div>
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <label style="margin:0; display:flex; align-items:center; gap:6px; cursor:pointer;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+                    <label style="margin:0;display:flex;align-items:center;gap:6px;cursor:pointer">
                         <input type="checkbox" id="useRegex" checked> 用正则
                     </label>
-                    <button class="btn secondary" style="height:32px; padding:0 12px; font-size:0.8rem;" onclick="executeReplace()">🔄 替换</button>
+                    <button class="btn secondary" style="height:32px;padding:0 12px;font-size:.8rem" onclick="executeReplace()">🔄 替换</button>
                 </div>
 
-
-          
-            <div class="panel-scroll">
                 <p class="hint">一个图片入口，支持原图插入 Markdown、AI 改图和连续编辑。</p>
                 <div class="workspace-section-title">对话 API 配置</div>
 
@@ -375,20 +441,15 @@
                     <label for="imagePrompt">提示词 / 编辑指令 <span class="prompt-count" id="imagePromptCount">0 字</span></label>
                     <textarea id="imagePrompt" class="glass-input" rows="4" placeholder="描述想生成的画面，或说明如何修改参考图片…"></textarea>
                 </div>
-                <div class="form-group">
-                    <label for="imageInput">图片上传（统一入口）</label>
-                    <div class="image-upload-drop" id="imageUploadDrop"><input id="imageInput" class="glass-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif"><p class="small">选择或拖入一张图片；载入后可插入 MD，也可直接输入指令进行 AI 改图</p></div>
-                    <div class="image-source" id="imageSourcePreview">
-                        <img id="imageSourceThumb" alt="参考图预览">
-                        <div class="image-source-info" id="imageSourceInfo">参考图片已载入</div>
-                        <button class="btn secondary" id="removeImageSource" type="button">移除</button>
-                    </div>
-                    <button class="btn secondary full" id="insertSourceImageBtn" type="button" disabled style="margin-top:8px">插入原图到 MD</button>
-                </div>
-                <div class="actions">
+                                <div class="actions">
                     <button class="btn purple" id="generateImageBtn" type="button">✦ 生成图片</button>
-                    <button class="btn secondary" id="insertImageBtn" type="button" disabled>插入 MD</button>
+                    <button class="btn secondary" id="insertImageBtn" type="button" disabled>插入图片链接</button>
                 </div>
+                <div class="image-insert-actions">
+                    <button class="btn secondary" id="insertImageBase64Btn" type="button" disabled>嵌入 Base64</button>
+                    <button class="btn secondary" id="copyImageUrlBtn" type="button" disabled>复制图片链接</button>
+                </div>
+                <p class="small">图片链接方式依赖原图地址有效期；Base64 方式会把图片数据写入 MD，文件体积会明显增加。</p>
                 <div class="image-actions">
                     <button class="btn secondary" id="downloadImageBtn" type="button" disabled>下载图片</button>
                     <button class="btn secondary" id="useImageBtn" type="button" disabled>继续编辑此图</button>
@@ -466,6 +527,7 @@
                 <button class="tool-btn" title="复制全部源码" onclick="copyContent()">📋</button>
                 <div style="width: 1px; height: 20px; background: rgba(255,255,255,0.1); margin: 0 2px;"></div>
                 <button class="tool-btn" title="清空编辑器所有内容" onclick="clearDocument()" style="color: #fca5a5; font-size: 1.1rem; padding-bottom: 2px;">🗑️</button>
+                <a class="tool-btn home-btn" href="https://cpuck.com/" title="返回 cpuck.com 首页">⌂ 首页</a>
             </div>
 
             <section class="split">
@@ -501,6 +563,10 @@
 
         let chatHistory = [];
         let lastChatReply = '';
+        let lastImageAnalysis = '';
+        let imageAnalysisRunning = false;
+        let speechUtterance = null;
+        let speechReadActive = false;
 
         window.addEventListener('load', () => {
             document.getElementById('markdownInput').value = localStorage.getItem(STORAGE_KEYS.doc) || DEFAULT_DOC;
@@ -532,6 +598,8 @@
             renderPreview();
             initChatUI();
             initImageGenerator();
+            initImageAnalysis();
+            initSpeechReader();
         });
 
         function saveSettings() {
@@ -1357,6 +1425,74 @@
             }
         }
 
+        async function analyzeUploadedImage() {
+            const button = document.getElementById('analyzeImageBtn');
+            const status = document.getElementById('imageAnalysisStatus');
+            const key = document.getElementById('apiKey').value.trim();
+            const prompt = document.getElementById('imageAnalysisPrompt').value.trim();
+            if (!imageSourceBlob) {
+                status.textContent = '请先上传一张图片。';
+                return;
+            }
+            if (!key) {
+                status.textContent = '请先填写上方对话 API Key。';
+                return;
+            }
+            if (imageAnalysisRunning) return;
+
+            imageAnalysisRunning = true;
+            button.disabled = true;
+            button.textContent = '分析中…';
+            status.textContent = '正在压缩图片并请求视觉模型…';
+            try {
+                saveSettings();
+                const imageData = await imageJpegData(imageSourceBlob);
+                const data = await requestChatCompletion([
+                    { role: 'system', content: '你是一名严谨的图像理解助手。根据用户提供的图片进行客观分析；区分可见事实与推测，不识别或猜测真实人物身份，不确定处明确说明。使用中文，结构清晰。' },
+                    {
+                        role: 'user',
+                        content: [
+                            { type: 'text', text: prompt || '请客观分析这张图片。' },
+                            { type: 'image_url', image_url: { url: imageData, detail: 'high' } }
+                        ]
+                    }
+                ], 4096, 120000);
+                const content = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+                const result = Array.isArray(content)
+                    ? content.map(part => typeof part === 'string' ? part : (part.text || '')).filter(Boolean).join('\\n')
+                    : String(content || '').trim();
+                if (!result) throw new Error('视觉模型没有返回有效分析内容。');
+                lastImageAnalysis = result;
+                document.getElementById('imageAnalysisText').textContent = result;
+                document.getElementById('imageAnalysisResult').hidden = false;
+                document.getElementById('insertImageAnalysisBtn').disabled = false;
+                status.textContent = '分析完成 · ' + (data.usage && data.usage.total_tokens ? data.usage.total_tokens + ' Tokens' : '视觉模型已返回结果');
+            } catch (error) {
+                let message = error.message || String(error);
+                if (/image_url|image input|vision|multimodal|unsupported|not support/i.test(message)) {
+                    message += '；当前模型或服务商可能不支持图像输入，请换成支持视觉理解的模型。';
+                }
+                status.textContent = '分析失败：' + message;
+            } finally {
+                imageAnalysisRunning = false;
+                button.disabled = false;
+                button.textContent = '🔍 模型分析图';
+            }
+        }
+
+        function insertImageAnalysisIntoMarkdown() {
+            if (!lastImageAnalysis) return;
+            const saved = insertAtCursor('\\n\\n## 图片分析\\n\\n' + lastImageAnalysis + '\\n\\n');
+            document.getElementById('imageAnalysisStatus').textContent = saved === false
+                ? '分析结果已插入，但本地自动保存空间可能不足，请导出 MD 备份。'
+                : '图片分析结果已插入 Markdown，右侧预览会同步更新。';
+        }
+
+        function initImageAnalysis() {
+            document.getElementById('analyzeImageBtn').addEventListener('click', analyzeUploadedImage);
+            document.getElementById('insertImageAnalysisBtn').addEventListener('click', insertImageAnalysisIntoMarkdown);
+        }
+
         function initChatUI() {
             document.getElementById('chatSendBtn').addEventListener('click', sendChatPrompt);
             document.getElementById('chatTestBtn').addEventListener('click', testChatApi);
@@ -1377,6 +1513,57 @@
                 }
             });
             renderChatLog();
+        }
+
+        function resetSpeechReader(message) {
+            speechReadActive = false;
+            speechUtterance = null;
+            const button = document.getElementById('ttsToggleBtn');
+            if (button) button.textContent = '🔊 语音朗读';
+            const status = document.getElementById('ttsStatus');
+            if (status && message) status.textContent = message;
+        }
+
+        function toggleSpeechRead() {
+            if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
+                document.getElementById('ttsStatus').textContent = '当前浏览器不支持 Web Speech 语音朗读。';
+                return;
+            }
+            if (speechReadActive || window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel();
+                resetSpeechReader('已停止朗读。');
+                return;
+            }
+            const text = getTextarea().value.trim();
+            if (!text) {
+                document.getElementById('ttsStatus').textContent = 'Markdown 文档为空，请先输入内容。';
+                return;
+            }
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'zh-CN';
+            utterance.rate = 1;
+            utterance.onend = function () {
+                if (speechUtterance === utterance) resetSpeechReader('朗读完成。');
+            };
+            utterance.onerror = function (event) {
+                if (speechUtterance === utterance) resetSpeechReader('朗读失败：' + (event.error || '浏览器语音服务异常'));
+            };
+            speechUtterance = utterance;
+            speechReadActive = true;
+            document.getElementById('ttsToggleBtn').textContent = '⏹ 停止朗读';
+            document.getElementById('ttsStatus').textContent = '正在使用浏览器本地中文语音朗读…';
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function initSpeechReader() {
+            const button = document.getElementById('ttsToggleBtn');
+            if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
+                button.disabled = true;
+                document.getElementById('ttsStatus').textContent = '当前浏览器不支持本地语音朗读。';
+                return;
+            }
+            button.addEventListener('click', toggleSpeechRead);
         }
 
         function safeStorageGet(key) {
@@ -1488,6 +1675,10 @@
             document.getElementById('imageSourceInfo').textContent = imageSourceName + ' · ' + (blob.size / 1048576).toFixed(2) + ' MB';
             document.getElementById('imageSourcePreview').classList.add('show');
             document.getElementById('insertSourceImageBtn').disabled = false;
+            lastImageAnalysis = '';
+            document.getElementById('imageAnalysisResult').hidden = true;
+            document.getElementById('insertImageAnalysisBtn').disabled = true;
+            document.getElementById('imageAnalysisStatus').textContent = '图片已更新，可以重新进行模型分析。';
             updateImageTaskLabel();
         }
 
@@ -1500,6 +1691,10 @@
             document.getElementById('imageSourcePreview').classList.remove('show');
             document.getElementById('imageSourceThumb').removeAttribute('src');
             document.getElementById('insertSourceImageBtn').disabled = true;
+            lastImageAnalysis = '';
+            document.getElementById('imageAnalysisResult').hidden = true;
+            document.getElementById('insertImageAnalysisBtn').disabled = true;
+            document.getElementById('imageAnalysisStatus').textContent = '请先上传图片，再进行模型分析。';
             updateImageTaskLabel();
         }
 
@@ -1849,35 +2044,75 @@
             document.getElementById('imageResultImage').src = url;
             document.getElementById('imageResultPreview').hidden = false;
             document.getElementById('imageResultCaption').textContent = modelName + ' · ' + new Date().toLocaleString('zh-CN');
-            ['insertImageBtn', 'downloadImageBtn', 'useImageBtn'].forEach(id => { document.getElementById(id).disabled = false; });
-            imageStatus('生成完成。可以插入 Markdown、下载图片，或将结果作为下一次编辑的参考图。', 'success');
+            ['insertImageBtn', 'insertImageBase64Btn', 'downloadImageBtn', 'useImageBtn'].forEach(id => { document.getElementById(id).disabled = false; });
+            document.getElementById('copyImageUrlBtn').disabled = !/^https?:\/\//i.test(url);
+            imageStatus('生成完成。可选择插入外链、嵌入 Base64、复制链接、下载，或继续编辑。', 'success');
         }
 
-        async function insertGeneratedImageIntoMarkdown() {
+        function insertGeneratedImageLink() {
             if (!imageResultUrl) return;
-            const button = document.getElementById('insertImageBtn');
+            const saved = insertAtCursor('\\n![AI 生成图片](' + imageResultUrl + ')\\n');
+            const isData = /^data:image\\//i.test(imageResultUrl);
+            imageStatus(
+                saved === false
+                    ? '图片链接已插入，但本地自动保存空间可能不足，请导出 MD 备份。'
+                    : (isData ? '模型直接返回了 Base64 图片，已按内嵌图片方式插入 Markdown。' : '图片外链已插入 Markdown，预览区会显示图片；请注意部分服务商链接可能有时效。'),
+                saved === false ? 'error' : 'success'
+            );
+        }
+
+        async function insertGeneratedImageBase64() {
+            if (!imageResultUrl) return;
+            const button = document.getElementById('insertImageBase64Btn');
             button.disabled = true;
+            button.textContent = '图片处理中…';
             try {
-                const response = await fetch(imageResultUrl);
-                if (!response.ok) throw new Error('HTTP ' + response.status);
-                const blob = await response.blob();
-                if (!blob.type || !blob.type.startsWith('image/')) throw new Error('返回内容不是图片');
-                const dataUrl = await imageBlobDataUrl(blob);
-                const saved = insertAtCursor('\n![AI 生成图片](' + dataUrl + ')\n');
-                imageStatus(saved === false
-                    ? 'AI 图片已插入，但本地缓存空间可能不足；请立即导出 MD 备份。'
-                    : 'AI 生成图已完整嵌入 Markdown，可随 MD 一起保存。',
-                    saved === false ? 'error' : 'success');
-            } catch (error) {
-                // 部分图像服务不开放跨域读取：退回插入服务商图片 URL，不让用户丢失结果。
-                if (/^(https?:\/\/|data:image\/)/i.test(String(imageResultUrl))) {
-                    insertAtCursor('\n![AI 生成图片](' + imageResultUrl + ')\n');
-                    imageStatus('图片已按原始链接插入 Markdown；若服务商链接有时效，请同时下载图片备份。', 'success');
-                } else {
-                    imageStatus('AI 图片插入失败：' + (error.message || error), 'error');
+                let dataUrl = imageResultUrl;
+                if (!/^data:image\\//i.test(dataUrl)) {
+                    const response = await fetch(imageResultUrl);
+                    if (!response.ok) throw new Error('图片读取失败：HTTP ' + response.status);
+                    const blob = await response.blob();
+                    if (!blob.type || !blob.type.startsWith('image/')) throw new Error('服务商返回的内容不是图片。');
+                    dataUrl = await imageBlobDataUrl(blob);
                 }
+                const saved = insertAtCursor('\\n![AI 生成图片](' + dataUrl + ')\\n');
+                imageStatus(
+                    saved === false
+                        ? 'Base64 图片已插入，但本地缓存空间可能不足；请立即导出 MD 备份。'
+                        : '已将生成图完整嵌入 Markdown。导出 MD 后图片数据也会保留。',
+                    saved === false ? 'error' : 'success'
+                );
+            } catch (error) {
+                imageStatus('Base64 嵌入失败：' + (error.message || error) + '。如果服务商禁止跨域读取，请使用“插入图片链接”或下载图片。', 'error');
             } finally {
                 button.disabled = !imageResultUrl;
+                button.textContent = '嵌入 Base64';
+            }
+        }
+
+        async function copyGeneratedImageUrl() {
+            if (!imageResultUrl) return;
+            if (!/^https?:\/\//i.test(imageResultUrl)) {
+                imageStatus('当前模型直接返回 Base64，没有独立图片外链；可以使用“嵌入 Base64”。', 'error');
+                return;
+            }
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(imageResultUrl);
+                } else {
+                    const field = document.createElement('textarea');
+                    field.value = imageResultUrl;
+                    field.style.position = 'fixed';
+                    field.style.opacity = '0';
+                    document.body.appendChild(field);
+                    field.select();
+                    const copied = document.execCommand('copy');
+                    field.remove();
+                    if (!copied) throw new Error('浏览器拒绝复制。');
+                }
+                imageStatus('图片外链已复制。', 'success');
+            } catch (error) {
+                imageStatus('复制失败：' + (error.message || error), 'error');
             }
         }
 
@@ -1935,6 +2170,8 @@
         function initImageGenerator() {
             document.getElementById('imageModel').addEventListener('change', updateImageModel);
             document.getElementById('imageTaskMode').addEventListener('change', updateImageTaskLabel);
+            document.getElementById('insertImageBase64Btn').disabled = true;
+            document.getElementById('copyImageUrlBtn').disabled = true;
             document.getElementById('toggleChatKey').addEventListener('click', function () {
                 const field = document.getElementById('apiKey');
                 field.type = field.type === 'password' ? 'text' : 'password';
@@ -1953,11 +2190,25 @@
             document.getElementById('imagePrompt').addEventListener('input', updateImagePromptCount);
             updateImagePromptCount();
             document.getElementById('generateImageBtn').addEventListener('click', generateImage);
-            document.getElementById('insertImageBtn').addEventListener('click', insertGeneratedImageIntoMarkdown);
+            document.getElementById('insertImageBtn').addEventListener('click', insertGeneratedImageLink);
+            document.getElementById('insertImageBase64Btn').addEventListener('click', insertGeneratedImageBase64);
+            document.getElementById('copyImageUrlBtn').addEventListener('click', copyGeneratedImageUrl);
             document.getElementById('downloadImageBtn').addEventListener('click', downloadGeneratedImage);
             document.getElementById('useImageBtn').addEventListener('click', useGeneratedImageAsSource);
             document.getElementById('removeImageSource').addEventListener('click', clearImageSource);
             document.getElementById('insertSourceImageBtn').addEventListener('click', insertSourceImageIntoMarkdown);
+            document.getElementById('quickEditImageBtn').addEventListener('click', function () {
+                if (!imageSourceBlob) {
+                    imageStatus('请先上传一张图片，再开始 AI 改图。', 'error');
+                    document.getElementById('imageInput').click();
+                    return;
+                }
+                document.getElementById('imageTaskMode').value = 'edit';
+                updateImageTaskLabel();
+                document.getElementById('imagePrompt').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                document.getElementById('imagePrompt').focus();
+                imageStatus('已切换到图像编辑模式。输入修改要求后，点击“开始改图”。', 'success');
+            });
             const imageInput = document.getElementById('imageInput');
             const imageDrop = document.getElementById('imageUploadDrop');
             const acceptImageFile = file => {
