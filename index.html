@@ -315,7 +315,7 @@
                 <div class="workspace-section-title">语音朗读</div>
                 <div class="form-group">
                     <button class="btn secondary full" id="ttsToggleBtn" type="button">🔊 语音朗读</button>
-                    <p class="small" id="ttsStatus" style="margin-top:7px">朗读当前 Markdown 文档；使用浏览器本地中文语音，不上传文档。</p>
+                    <p class="small" id="ttsStatus" style="margin-top:7px">朗读当前 Markdown 文字；自动跳过图片 Base64 和链接地址；使用浏览器本地中文语音，不上传文档。</p>
                 </div>
 
                 <div class="divider"></div>
@@ -441,7 +441,7 @@
                     <label for="imagePrompt">提示词 / 编辑指令 <span class="prompt-count" id="imagePromptCount">0 字</span></label>
                     <textarea id="imagePrompt" class="glass-input" rows="4" placeholder="描述想生成的画面，或说明如何修改参考图片…"></textarea>
                 </div>
-                                <div class="actions">
+                <div class="actions">
                     <button class="btn purple" id="generateImageBtn" type="button">✦ 生成图片</button>
                     <button class="btn secondary" id="insertImageBtn" type="button" disabled>插入图片链接</button>
                 </div>
@@ -1524,6 +1524,26 @@
             if (status && message) status.textContent = message;
         }
 
+        function markdownToSpeechText(markdown) {
+            let text = String(markdown || '');
+            const fence = String.fromCharCode(96).repeat(3);
+            text = text.replace(new RegExp(fence + '[\\s\\S]*?' + fence, 'g'), ' 代码块内容已省略 ');
+            return text
+                .replace(/!\[([^\]]*)\]\(data:image\/[^)]*\)/gi, ' $1 图片 ')
+                .replace(/!\[([^\]]*)\]\(https?:\/\/[^)]+\)/gi, ' $1 图片 ')
+                .replace(/!\[([^\]]*)\]\([^)]+\)/g, ' $1 图片 ')
+                .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+                .replace(/^#{1,6}\s*/gm, '')
+                .replace(/^\s*>\s?/gm, '')
+                .replace(/^\s*[-*+]\s+/gm, '')
+                .replace(/^\s*\d+\.\s+/gm, '')
+                .replace(/[*_~|]/g, ' ')
+                .replace(/https?:\/\/\S+/g, '链接')
+                .replace(/[ \t]+/g, ' ')
+                .replace(/\n{3,}/g, '\n\n')
+                .trim();
+        }
+
         function toggleSpeechRead() {
             if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
                 document.getElementById('ttsStatus').textContent = '当前浏览器不支持 Web Speech 语音朗读。';
@@ -1534,7 +1554,7 @@
                 resetSpeechReader('已停止朗读。');
                 return;
             }
-            const text = getTextarea().value.trim();
+            const text = markdownToSpeechText(getTextarea().value);
             if (!text) {
                 document.getElementById('ttsStatus').textContent = 'Markdown 文档为空，请先输入内容。';
                 return;
