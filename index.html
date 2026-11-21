@@ -1459,7 +1459,7 @@
                 ], 4096, 120000);
                 const content = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
                 const result = Array.isArray(content)
-                    ? content.map(part => typeof part === 'string' ? part : (part.text || '')).filter(Boolean).join('\\n')
+                    ? content.map(part => typeof part === 'string' ? part : (part.text || '')).filter(Boolean).join('\n')
                     : String(content || '').trim();
                 if (!result) throw new Error('视觉模型没有返回有效分析内容。');
                 lastImageAnalysis = result;
@@ -1482,7 +1482,7 @@
 
         function insertImageAnalysisIntoMarkdown() {
             if (!lastImageAnalysis) return;
-            const saved = insertAtCursor('\\n\\n## 图片分析\\n\\n' + lastImageAnalysis + '\\n\\n');
+            const saved = insertAtCursor('\n\n## 图片分析\n\n' + lastImageAnalysis + '\n\n');
             document.getElementById('imageAnalysisStatus').textContent = saved === false
                 ? '分析结果已插入，但本地自动保存空间可能不足，请导出 MD 备份。'
                 : '图片分析结果已插入 Markdown，右侧预览会同步更新。';
@@ -2051,8 +2051,8 @@
 
         function insertGeneratedImageLink() {
             if (!imageResultUrl) return;
-            const saved = insertAtCursor('\\n![AI 生成图片](' + imageResultUrl + ')\\n');
-            const isData = /^data:image\\//i.test(imageResultUrl);
+            const saved = insertAtCursor('\n![AI 生成图片](' + imageResultUrl + ')\n');
+            const isData = /^data:image\//i.test(imageResultUrl);
             imageStatus(
                 saved === false
                     ? '图片链接已插入，但本地自动保存空间可能不足，请导出 MD 备份。'
@@ -2068,14 +2068,14 @@
             button.textContent = '图片处理中…';
             try {
                 let dataUrl = imageResultUrl;
-                if (!/^data:image\\//i.test(dataUrl)) {
+                if (!/^data:image\//i.test(dataUrl)) {
                     const response = await fetch(imageResultUrl);
                     if (!response.ok) throw new Error('图片读取失败：HTTP ' + response.status);
                     const blob = await response.blob();
                     if (!blob.type || !blob.type.startsWith('image/')) throw new Error('服务商返回的内容不是图片。');
                     dataUrl = await imageBlobDataUrl(blob);
                 }
-                const saved = insertAtCursor('\\n![AI 生成图片](' + dataUrl + ')\\n');
+                const saved = insertAtCursor('\n![AI 生成图片](' + dataUrl + ')\n');
                 imageStatus(
                     saved === false
                         ? 'Base64 图片已插入，但本地缓存空间可能不足；请立即导出 MD 备份。'
