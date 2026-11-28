@@ -1667,21 +1667,15 @@
             }
 
             const compact = raw.replace(/\s+/g, '');
-            if (compact.length > 64 && /^[A-Za-z0-9+/_-]+={0,2}$/.test(compact)) {
+            if (compact.length > 16 && /^[A-Za-z0-9+/_-]+={0,2}$/.test(compact)) {
                 const standardBase64 = compact.replace(/-/g, '+').replace(/_/g, '/');
                 return 'data:image/png;base64,' + standardBase64;
             }
 
-            let parsed;
-            try {
-                parsed = new URL(raw);
-            } catch (error) {
-                throw new Error('请输入完整的 https:// 图片地址，或 data:image Base64 数据。');
+            if (!/^https?:\/\/[^/\s?#]+(?:[/?#][^\s]*)?$/i.test(raw)) {
+                throw new Error('请输入完整的 HTTP/HTTPS 图片地址，或 data:image Base64 数据。');
             }
-            if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
-                throw new Error('图片链接仅支持 HTTP 或 HTTPS。');
-            }
-            return parsed.href.replace(/\(/g, '%28').replace(/\)/g, '%29');
+            return encodeURI(raw).replace(/\(/g, '%28').replace(/\)/g, '%29');
         }
 
         function insertMarkdownImage(alt, source) {
