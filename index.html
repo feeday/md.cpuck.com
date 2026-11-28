@@ -243,9 +243,9 @@
         .image-settings a{color:#7dd3fc;text-decoration:none}
         .image-settings a:hover{text-decoration:underline}
         @media(max-width:980px){.key-toggle{flex-basis:48px;min-width:48px}.image-upload-drop{padding:8px}}
-        .sidebar-ad{margin:0 0 16px;padding:8px;border:1px solid var(--border-light);border-radius:13px;background:rgba(0,0,0,.18);overflow:hidden;min-height:270px}
+        .sidebar-ad{margin:0 0 16px;padding:8px;border:1px solid var(--border-light);border-radius:13px;background:rgba(0,0,0,.18);overflow:hidden;min-height:0}
         .sidebar-ad-label{font-size:.68rem;color:var(--text-tertiary);text-align:center;letter-spacing:.12em;margin:0 0 5px}
-        .sidebar-ad .adsbygoogle{display:block;width:100%;min-height:250px}
+        .sidebar-ad .adsbygoogle{display:block;width:100%;height:100px}
         .analysis-result{margin-top:10px;padding:11px;border:1px solid var(--border-light);border-radius:12px;background:rgba(0,0,0,.22)}
         .analysis-result[hidden]{display:none!important}
         .analysis-result-title{font-size:.76rem;font-weight:800;color:#c4b5fd;margin-bottom:7px}
@@ -255,7 +255,6 @@
         .home-btn{color:#7dd3fc;text-decoration:none;margin-left:4px}
         .home-btn:hover{color:#fff}
         @media(max-width:980px){
-            .sidebar-ad{min-height:250px}
             .image-insert-actions{grid-template-columns:1fr 1fr}
             .topbar .home-btn{margin-left:auto}
         }
@@ -270,11 +269,10 @@
                 <div class="sidebar-ad" aria-label="Google AdSense 广告">
                     <div class="sidebar-ad-label">广告</div>
                     <ins class="adsbygoogle"
-                         style="display:block;width:100%;min-height:250px"
+                         style="display:block;width:100%;height:100px"
                          data-ad-client="ca-pub-1964437526797765"
                          data-ad-slot="1907914008"
-                         data-ad-format="auto"
-                         data-full-width-responsive="true"></ins>
+                         ></ins>
                     <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
                 </div>
 
@@ -523,7 +521,6 @@
                 <button class="tool-btn" title="在新标签页测试网页代码" onclick="openWebPreview()" style="font-size: 1.1rem; padding-bottom: 2px;">🌐</button>
                 <button class="tool-btn export-btn" title="下载 Markdown 文件" onclick="downloadFile()">MD↓</button>
                 <button class="tool-btn export-btn" title="下载 Word 文档（DOCX）" onclick="downloadWord()">Word↓</button>
-                <button class="tool-btn export-btn" title="下载 PDF 文档" onclick="downloadPdf()">PDF↓</button>
                 <button class="tool-btn" title="复制全部源码" onclick="copyContent()">📋</button>
                 <div style="width: 1px; height: 20px; background: rgba(255,255,255,0.1); margin: 0 2px;"></div>
                 <button class="tool-btn" title="清空编辑器所有内容" onclick="clearDocument()" style="color: #fca5a5; font-size: 1.1rem; padding-bottom: 2px;">🗑️</button>
@@ -546,7 +543,7 @@
     </div>
 
     <script>
-        const DEFAULT_DOC = '# MDE Markdown 工作台\n\n欢迎使用 AI + Markdown 工作台。\n\n- 左侧：配置自定义对话 API、选择模型、进行 AI 对话与图像生成。\n- 中间：编辑 Markdown 源文档。\n- 右侧：实时预览排版效果。\n- 支持导出 Markdown、Word（DOCX）和 PDF。\n\n你可以把 AI 对话回答或生成图片直接插入当前文档。';
+        const DEFAULT_DOC = '# MDE Markdown 工作台\n\n欢迎使用 AI + Markdown 工作台。\n\n- 左侧：配置自定义对话 API、选择模型、进行 AI 对话与图像生成。\n- 中间：编辑 Markdown 源文档。\n- 右侧：实时预览排版效果。\n- 支持导出 Markdown、和 Word（DOCX）。\n\n你可以把 AI 对话回答或生成图片直接插入当前文档。';
         const STORAGE_KEYS = {
             doc: 'md_editor_document',
             apiKey: 'md_editor_api_key',
@@ -939,122 +936,6 @@
             } catch (error) {
                 alert('Word 导出失败：' + (error.message || error));
             } finally {
-                if (button) button.disabled = false;
-            }
-        }
-
-        async function waitForPdfImages(root) {
-            const images = Array.from(root.querySelectorAll('img'));
-            await Promise.all(images.map(img => new Promise(resolve => {
-                let done = false;
-                const finish = () => {
-                    if (done) return;
-                    done = true;
-                    if (!img.naturalWidth && img.parentNode) {
-                        const fallback = document.createElement('div');
-                        fallback.className = 'pdf-image-fallback';
-                        fallback.textContent = img.alt ? '图片：' + img.alt : '图片加载失败';
-                        img.replaceWith(fallback);
-                    }
-                    resolve();
-                };
-                if (img.complete) { finish(); return; }
-                img.addEventListener('load', finish, { once: true });
-                img.addEventListener('error', finish, { once: true });
-                setTimeout(finish, 12000);
-            })));
-        }
-
-        async function downloadPdf() {
-            const button = document.querySelector('[onclick="downloadPdf()"]');
-            if (button) button.disabled = true;
-            let wrap = null;
-            let style = null;
-            let progress = null;
-            const previousHtmlOverflow = document.documentElement.style.overflow;
-            const previousBodyOverflow = document.body.style.overflow;
-            const previousHtmlHeight = document.documentElement.style.height;
-            const previousBodyHeight = document.body.style.height;
-            try {
-                const markdown = getTextarea().value || '';
-                if (!markdown.trim()) throw new Error('当前 Markdown 文档为空，没有可导出的内容。');
-                await loadExternalScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js', () => typeof window.html2pdf === 'function');
-
-                style = document.createElement('style');
-                style.id = 'mdePdfExportStyle';
-                style.textContent = [
-                    '.pdf-export-root{position:fixed;left:0;top:0;width:794px;min-height:1123px;display:block;overflow:visible;z-index:2147483647;margin:0;padding:0;background:#fff;color:#1f2937;font-family:"Microsoft YaHei","PingFang SC","Noto Sans CJK SC","Source Han Sans SC",SimSun,Arial,sans-serif;font-size:14px;line-height:1.75;box-sizing:border-box}',
-                    '.pdf-export-root *{box-sizing:border-box!important;color:#1f2937!important;text-shadow:none!important;box-shadow:none!important}',
-                    '.pdf-export-content{width:794px;min-height:1123px;padding:42px 46px 52px;background:#fff;overflow:visible;overflow-wrap:anywhere;word-break:normal}',
-                    '.pdf-export-content h1{font-size:26px;line-height:1.35;margin:0 0 22px;padding-bottom:12px;border-bottom:1px solid #cbd5e1;break-after:avoid;page-break-after:avoid}',
-                    '.pdf-export-content h2{font-size:21px;line-height:1.4;margin:24px 0 12px;break-after:avoid;page-break-after:avoid}',
-                    '.pdf-export-content h3,.pdf-export-content h4,.pdf-export-content h5,.pdf-export-content h6{font-size:16px;line-height:1.45;margin:18px 0 9px;break-after:avoid;page-break-after:avoid}',
-                    '.pdf-export-content p{margin:9px 0;line-height:1.8;overflow-wrap:anywhere;word-break:normal}',
-                    '.pdf-export-content ul,.pdf-export-content ol{padding-left:25px;margin:10px 0}',
-                    '.pdf-export-content li{margin:4px 0;line-height:1.7;overflow-wrap:anywhere}',
-                    '.pdf-export-content blockquote{margin:12px 0;padding:8px 14px;border-left:4px solid #64748b;background:#f8fafc}',
-                    '.pdf-export-content a{color:#0369a1!important;overflow-wrap:anywhere;word-break:break-all}',
-                    '.pdf-export-content table{width:100%!important;max-width:100%!important;margin:14px 0;border-collapse:collapse;table-layout:fixed;font-size:12px;page-break-inside:auto}',
-                    '.pdf-export-content th,.pdf-export-content td{border:1px solid #cbd5e1!important;padding:7px 8px;text-align:left;vertical-align:top;overflow-wrap:anywhere;word-break:break-word}',
-                    '.pdf-export-content th{background:#eaf2f8!important;font-weight:700}',
-                    '.pdf-export-content tr{break-inside:avoid;page-break-inside:avoid}',
-                    '.pdf-export-content pre{max-width:100%;margin:12px 0;padding:12px;border:1px solid #dbe3ec;border-radius:5px;background:#f3f4f6!important;white-space:pre-wrap!important;overflow-wrap:anywhere!important;word-break:break-word;font-family:Consolas,"Courier New",monospace;font-size:10px;line-height:1.55}',
-                    '.pdf-export-content code{background:#f1f5f9!important;font-family:Consolas,"Courier New",monospace;font-size:.92em;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word}',
-                    '.pdf-export-content pre code{background:transparent!important}',
-                    '.pdf-export-content img{display:block;max-width:100%!important;height:auto!important;margin:12px auto;object-fit:contain;break-inside:avoid;page-break-inside:avoid}',
-                    '.pdf-export-content video{display:none!important}',
-                    '.pdf-image-fallback{margin:10px 0;padding:8px 10px;border:1px dashed #94a3b8;color:#64748b!important;font-size:12px}',
-                    '.pdf-export-content hr{border:0;border-top:1px solid #cbd5e1;margin:18px 0}'
-                ].join('\n');
-                document.head.appendChild(style);
-
-                wrap = document.createElement('div');
-                wrap.className = 'pdf-export-root';
-                const content = document.createElement('div');
-                content.className = 'pdf-export-content';
-                content.innerHTML = renderMarkdown(markdown);
-                wrap.appendChild(content);
-                document.documentElement.style.overflow = 'visible';
-                document.body.style.overflow = 'visible';
-                document.documentElement.style.height = 'auto';
-                document.body.style.height = 'auto';
-                document.body.appendChild(wrap);
-
-                progress = document.createElement('div');
-                progress.textContent = '正在生成 PDF，请稍候…';
-                progress.style.cssText = 'position:fixed;right:16px;top:16px;z-index:2147483647;padding:10px 14px;border-radius:10px;background:#0f172a;color:#fff;font:13px/1.5 sans-serif;box-shadow:0 4px 18px rgba(0,0,0,.25)';
-                document.body.appendChild(progress);
-
-                for (const img of Array.from(content.querySelectorAll('img'))) {
-                    const src = img.getAttribute('src') || '';
-                    if (/^https?:\/\//i.test(src)) {
-                        img.removeAttribute('src');
-                        img.crossOrigin = 'anonymous';
-                        img.src = src;
-                    }
-                }
-                await waitForPdfImages(content);
-                if (document.fonts && document.fonts.ready) await document.fonts.ready;
-                await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-
-                await window.html2pdf().set({
-                    margin: [10, 10, 12, 10],
-                    filename: getDocumentBaseName() + '.pdf',
-                    image: { type: 'jpeg', quality: 0.96 },
-                    html2canvas: { scale: 2, useCORS: true, allowTaint: false, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0, windowWidth: 794, logging: false },
-                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
-                    pagebreak: { mode: ['css', 'legacy'], avoid: ['h1', 'h2', 'h3', 'tr', 'img'] }
-                }).from(content).save();
-            } catch (error) {
-                alert('PDF 导出失败：' + (error.message || error));
-            } finally {
-                if (wrap) wrap.remove();
-                if (style) style.remove();
-                if (progress) progress.remove();
-                document.documentElement.style.overflow = previousHtmlOverflow;
-                document.body.style.overflow = previousBodyOverflow;
-                document.documentElement.style.height = previousHtmlHeight;
-                document.body.style.height = previousBodyHeight;
                 if (button) button.disabled = false;
             }
         }
