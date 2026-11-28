@@ -1693,8 +1693,11 @@
             const field = document.getElementById('imageInsertUrl');
             const alt = document.getElementById('imageInsertAlt').value.trim() || '图片';
             try {
-                insertMarkdownImage(alt, field.value);
-                imageStatus('图片链接 / Base64 已按 Markdown 图片语法插入当前文档。', 'success');
+                const saved = insertMarkdownImage(alt, field.value);
+                imageStatus(
+                    saved === false ? '图片已插入，但浏览器本地自动保存空间可能不足，请立即导出 MD 备份。' : '图片链接 / Base64 已按 Markdown 图片语法插入当前文档。',
+                    saved === false ? 'error' : 'success'
+                );
             } catch (error) {
                 imageStatus('图片插入失败：' + (error.message || error), 'error');
             }
@@ -1716,8 +1719,11 @@
                     if (!blob.type || !blob.type.startsWith('image/')) throw new Error('链接返回的内容不是图片。');
                     dataUrl = await imageBlobDataUrl(blob);
                 }
-                insertMarkdownImage(alt, dataUrl);
-                imageStatus('图片已转换为 Base64 并嵌入 Markdown；导出 MD 后会保留图片数据。', 'success');
+                const saved = insertMarkdownImage(alt, dataUrl);
+                imageStatus(
+                    saved === false ? 'Base64 图片已插入，但本地自动保存空间可能不足；请立即导出 MD 备份。' : '图片已转换为 Base64 并嵌入 Markdown；导出 MD 后会保留图片数据。',
+                    saved === false ? 'error' : 'success'
+                );
             } catch (error) {
                 imageStatus('Base64 编码失败：' + (error.message || error) + '。若是外部图片链接，可能被图片服务器的跨域策略拦截，可改用“以图片链接插入 MD”。', 'error');
             } finally {
