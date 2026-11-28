@@ -418,7 +418,7 @@
                     <button class="btn secondary" id="downloadImageBtn" type="button" disabled>下载图片</button>
                     <button class="btn secondary" id="useImageBtn" type="button" disabled>继续编辑此图</button>
                 </div>
-                <p class="small">生成结果可在文本工具中插入文档，也可复制链接、下载或继续编辑。</p>
+                <p class="small">生成结果可在下方插入 Markdown，也可复制链接、下载或继续编辑。</p>
                 <div id="imageStatus" class="image-status">默认是文生图。上传图片只会预览；如需修改上传图，请手动选择“图像编辑”，再点击“开始改图”。生成结果可在本区插入 Markdown。</div>
                 <div id="imageTaskWrap" hidden>
                     <label for="imageTaskId">查询之前提交的任务</label>
@@ -1553,7 +1553,7 @@
             if (activeImageModel !== 'gpt') document.getElementById('imageTaskWrap').hidden = true;
             else if (activeImageTaskId) document.getElementById('imageTaskWrap').hidden = false;
             if (activeImageModel === 'gpt' && document.getElementById('imageTaskMode').value === 'transparent') {
-                document.getElementById('imageTaskMode').value = 'auto';
+                document.getElementById('imageTaskMode').value = 'create';
             }
             updateImageTaskLabel();
             saveImageSettings();
@@ -1667,8 +1667,9 @@
             }
 
             const compact = raw.replace(/\s+/g, '');
-            if (compact.length > 64 && /^[A-Za-z0-9+/]+={0,2}$/.test(compact)) {
-                return 'data:image/png;base64,' + compact;
+            if (compact.length > 64 && /^[A-Za-z0-9+/_-]+={0,2}$/.test(compact)) {
+                const standardBase64 = compact.replace(/-/g, '+').replace(/_/g, '/');
+                return 'data:image/png;base64,' + standardBase64;
             }
 
             let parsed;
@@ -1751,7 +1752,7 @@
                 imageStatus('原图插入失败：' + (error.message || error), 'error');
             } finally {
                 button.disabled = !imageSourceBlob;
-                button.textContent = '插入原图到 MD';
+                button.textContent = '原图 Base64 插入 MD';
             }
         }
 
@@ -2082,7 +2083,7 @@
                 imageStatus('Base64 嵌入失败：' + (error.message || error) + '。如果服务商禁止跨域读取，请使用“插入图片链接”或下载图片。', 'error');
             } finally {
                 button.disabled = !imageResultUrl;
-                button.textContent = '嵌入 Base64';
+                button.textContent = '生成图 Base64 嵌入 MD';
             }
         }
 
