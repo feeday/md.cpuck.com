@@ -228,6 +228,7 @@
         .image-document-actions .btn{height:auto;min-height:40px;min-width:0;padding:8px 9px;white-space:normal;line-height:1.35;font-size:.76rem}
         .image-document-actions .btn:last-child:nth-child(odd){grid-column:1/-1}
         .image-section-hint{padding:9px 10px;margin:0 0 12px;border:1px solid rgba(56,189,248,.2);border-radius:10px;background:rgba(56,189,248,.07);font-size:.75rem;line-height:1.55;color:var(--text-secondary);overflow-wrap:anywhere}
+        .image-edit-source-thumb{display:block;width:72px;height:72px;object-fit:cover;border-radius:10px;border:1px solid var(--border-light);margin:0 0 9px}
         .image-section-footnote{margin-top:9px}
         .image-encode-output{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.7rem;overflow-wrap:anywhere;word-break:break-all;min-height:96px}
         .image-check-label{display:flex;align-items:center;gap:7px;font-size:.76rem;text-transform:none;letter-spacing:0;margin:8px 0}
@@ -331,6 +332,7 @@
                 <details class="sidebar-group" name="sidebar-tools" id="imageEditGroup">
                     <summary class="sidebar-group-summary"><span class="sidebar-group-icon">🪄</span><span class="sidebar-group-copy"><span class="sidebar-group-title">AI 改图</span><span class="sidebar-group-desc">对已上传的参考图执行修改</span></span><span class="sidebar-group-chevron">⌄</span></summary>
                     <div class="sidebar-group-body">
+                        <img id="editSourceThumb" class="image-edit-source-thumb" alt="当前 AI 改图参考图预览" hidden>
                         <div class="image-section-hint" id="editSourceStatus">还没有参考图。请先到「图片上传」选择一张图片。</div>
                         <div class="form-group">
                             <label for="editImagePrompt">修改要求 <span class="prompt-count" id="editImagePromptCount">0 字</span></label>
@@ -1590,6 +1592,8 @@
             imageSourceName = name || '参考图片';
             imageSourceObjectUrl = URL.createObjectURL(blob);
             document.getElementById('imageSourceThumb').src = imageSourceObjectUrl;
+            document.getElementById('editSourceThumb').src = imageSourceObjectUrl;
+            document.getElementById('editSourceThumb').hidden = false;
             document.getElementById('imageSourceInfo').textContent = imageSourceName + ' · ' + (blob.size / 1048576).toFixed(2) + ' MB';
             document.getElementById('imageSourcePreview').classList.add('show');
             document.getElementById('insertSourceImageBtn').disabled = false;
@@ -1606,6 +1610,8 @@
             document.getElementById('imageInput').value = '';
             document.getElementById('imageSourcePreview').classList.remove('show');
             document.getElementById('imageSourceThumb').removeAttribute('src');
+            document.getElementById('editSourceThumb').removeAttribute('src');
+            document.getElementById('editSourceThumb').hidden = true;
             document.getElementById('insertSourceImageBtn').disabled = true;
             document.getElementById('encodeSourceImageBtn').disabled = true;
             document.getElementById('editSourceStatus').textContent = '还没有参考图。请先到「图片上传」选择一张图片。';
