@@ -226,6 +226,7 @@
         .image-actions .btn{min-width:0;padding:0 8px;font-size:.76rem}
         .image-document-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}
         .image-document-actions .btn{height:auto;min-height:40px;min-width:0;padding:8px 9px;white-space:normal;line-height:1.35;font-size:.76rem}
+        .image-document-actions .btn:last-child:nth-child(odd){grid-column:1/-1}
         .image-section-hint{padding:9px 10px;margin:0 0 12px;border:1px solid rgba(56,189,248,.2);border-radius:10px;background:rgba(56,189,248,.07);font-size:.75rem;line-height:1.55;color:var(--text-secondary);overflow-wrap:anywhere}
         .image-section-footnote{margin-top:9px}
         .image-encode-output{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.7rem;overflow-wrap:anywhere;word-break:break-all;min-height:96px}
@@ -2214,6 +2215,7 @@
                 if (activeImageModel === 'gpt' && activeImageTaskId) {
                     document.getElementById('imageTaskWrap').hidden = false;
                     document.getElementById('imageTaskId').value = activeImageTaskId;
+                    document.getElementById('imageResultGroup').open = true;
                 }
                 imageStatus(error.message || String(error), 'error');
             } finally {
