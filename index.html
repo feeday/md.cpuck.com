@@ -580,7 +580,7 @@
     </div>
 
     <script>
-        const DEFAULT_DOC = '# MDE Markdown 工作台\n\n欢迎使用 AI + Markdown 工作台。\n\n- 左侧图像工具：上传预览、文生图、手动选择图像编辑，并将原图/生成图/图片链接/Base64 插入文档。\n- 左侧文本工具：AI 对话、文档修改、查找替换和语音朗读。\n- 中间：编辑 Markdown 源文档。\n- 右侧：实时预览排版效果。\n- 支持导出 Markdown、和 Word（DOCX）。\n\n你可以把 AI 对话回答或生成图片直接插入当前文档。';
+        const DEFAULT_DOC = '# MDE Markdown 工作台\\n\\n欢迎使用 AI + Markdown 工作台。\\n\\n- 左侧图片上传、AI 改图、AI 生图、生成结果、Markdown 插入、图片编码和模型设置均为独立操作区。\\n- 左侧文本工具：AI 对话、文档修改、查找替换和语音朗读。\\n- 中间：编辑 Markdown 源文档。\\n- 右侧：实时渲染排版效果。\\n- 支持导出 Markdown 和 Word（DOCX）。\\n\\n图片上传不会自动改图，生成结果不会自动插入文档。';
         const STORAGE_KEYS = {
             doc: 'md_editor_document',
             apiKey: 'md_editor_api_key',
@@ -1483,8 +1483,10 @@
         let activeImageTaskId = '';
 
         function updateImagePromptCount() {
-            const count = document.getElementById('imagePrompt').value.length;
-            document.getElementById('imagePromptCount').textContent = count.toLocaleString('zh-CN') + ' 字';
+            const editCount = document.getElementById('editImagePrompt').value.length;
+            const createCount = document.getElementById('createImagePrompt').value.length;
+            document.getElementById('editImagePromptCount').textContent = editCount.toLocaleString('zh-CN') + ' 字';
+            document.getElementById('createImagePromptCount').textContent = createCount.toLocaleString('zh-CN') + ' 字';
         }
 
         function imageStatus(message, type) {
@@ -1513,8 +1515,34 @@
         }
 
         function updateImageTaskLabel() {
-            const mode = getImageTaskMode();
-            document.getElementById('generateImageBtn').textContent = mode === 'edit' ? '开始改图' : mode === 'transparent' ? '生成透明 PNG' : '生成图片';
+            const editButton = document.getElementById('editImageBtn');
+            const createButton = document.getElementById('generateImageBtn');
+            editButton.disabled = !imageSourceBlob || imageRunning;
+            createButton.disabled = imageRunning;
+            if (!imageRunning) {
+                createButton.textContent = document.getElementById('createImageMode').value === 'transparent' ? '生成透明 PNG' : '开始生成';
+            }
+        }
+
+        function startImageGeneration(mode) {
+            const isEdit = mode === 'edit';
+            const promptId = isEdit ? 'editImagePrompt' : 'createImagePrompt';
+            const prompt = document.getElementById(promptId).value.trim();
+            if (isEdit && !imageSourceBlob) {
+                imageStatus('请先在「图片上传」中选择参考图，再执行 AI 改图。', 'error');
+                return;
+            }
+            if (!prompt) {
+                imageStatus(isEdit ? '请先填写修改要求。' : '请先填写生成提示词。', 'error');
+                return;
+            }
+            if (mode === 'transparent' && activeImageModel !== 'qwen') {
+                imageStatus('透明 PNG 模式仅支持 Qwen，请先在「图像模型设置」中选择 Qwen。', 'error');
+                return;
+            }
+            document.getElementById('imagePrompt').value = prompt;
+            document.getElementById('imageTaskMode').value = mode;
+            generateImage();
         }
 
         function updateImageModel() {
@@ -1525,8 +1553,8 @@
             document.getElementById('imageResolutionGroup').hidden = activeImageModel !== 'gpt';
             if (activeImageModel !== 'gpt') document.getElementById('imageTaskWrap').hidden = true;
             else if (activeImageTaskId) document.getElementById('imageTaskWrap').hidden = false;
-            if (activeImageModel === 'gpt' && document.getElementById('imageTaskMode').value === 'transparent') {
-                document.getElementById('imageTaskMode').value = 'create';
+            if (activeImageModel === 'gpt' && document.getElementById('createImageMode').value === 'transparent') {
+                document.getElementById('createImageMode').value = 'create';
             }
             updateImageTaskLabel();
             saveImageSettings();
@@ -1564,6 +1592,8 @@
             document.getElementById('imageSourceInfo').textContent = imageSourceName + ' · ' + (blob.size / 1048576).toFixed(2) + ' MB';
             document.getElementById('imageSourcePreview').classList.add('show');
             document.getElementById('insertSourceImageBtn').disabled = false;
+            document.getElementById('encodeSourceImageBtn').disabled = false;
+            document.getElementById('editSourceStatus').textContent = '当前参考图：' + imageSourceName + ' · ' + (blob.size / 1048576).toFixed(2) + ' MB';
             updateImageTaskLabel();
         }
 
@@ -1576,6 +1606,8 @@
             document.getElementById('imageSourcePreview').classList.remove('show');
             document.getElementById('imageSourceThumb').removeAttribute('src');
             document.getElementById('insertSourceImageBtn').disabled = true;
+            document.getElementById('encodeSourceImageBtn').disabled = true;
+            document.getElementById('editSourceStatus').textContent = '还没有参考图。请先到「图片上传」选择一张图片。';
             if (document.getElementById('imageTaskMode').value === 'edit') {
                 document.getElementById('imageTaskMode').value = 'create';
             }
@@ -1658,8 +1690,9 @@
 
         function updateImageUrlInsertButtons() {
             const hasValue = !!document.getElementById('imageInsertUrl').value.trim();
+            const hasEncodedValue = !!document.getElementById('imageEncodeOutput').value.trim();
             document.getElementById('insertImageUrlBtn').disabled = !hasValue;
-            document.getElementById('insertImageUrlBase64Btn').disabled = !hasValue;
+            document.getElementById('insertEncodedImageBtn').disabled = !hasEncodedValue;
         }
 
         function insertImageUrlIntoMarkdown() {
@@ -1676,33 +1709,80 @@
             }
         }
 
-        async function insertImageUrlAsBase64() {
-            const field = document.getElementById('imageInsertUrl');
-            const button = document.getElementById('insertImageUrlBase64Btn');
-            const alt = document.getElementById('imageInsertAlt').value.trim() || '图片';
+        async function imageUrlToDataUrl(value) {
+            const source = normalizeMarkdownImageSource(value);
+            if (/^data:image\//i.test(source)) return source;
+            const response = await fetch(source);
+            if (!response.ok) throw new Error('图片读取失败：HTTP ' + response.status);
+            const blob = await response.blob();
+            if (!blob.type || !blob.type.startsWith('image/')) throw new Error('链接返回的内容不是图片。');
+            return await imageBlobDataUrl(blob);
+        }
+
+        function setImageEncodeOutput(value) {
+            document.getElementById('imageEncodeOutput').value = value || '';
+            document.getElementById('copyEncodedImageBtn').disabled = !value;
+            updateImageUrlInsertButtons();
+        }
+
+        async function encodeImageInput() {
+            const button = document.getElementById('encodeImageBtn');
+            const value = document.getElementById('imageEncodeInput').value.trim();
+            if (!value) { imageStatus('请先粘贴图片链接或 Base64 数据。', 'error'); return; }
             button.disabled = true;
             button.textContent = '正在编码…';
             try {
-                const source = normalizeMarkdownImageSource(field.value);
-                let dataUrl = source;
-                if (!/^data:image\//i.test(source)) {
-                    const response = await fetch(source);
-                    if (!response.ok) throw new Error('图片读取失败：HTTP ' + response.status);
-                    const blob = await response.blob();
-                    if (!blob.type || !blob.type.startsWith('image/')) throw new Error('链接返回的内容不是图片。');
-                    dataUrl = await imageBlobDataUrl(blob);
-                }
-                const saved = insertMarkdownImage(alt, dataUrl);
-                imageStatus(
-                    saved === false ? 'Base64 图片已插入，但本地自动保存空间可能不足；请立即导出 MD 备份。' : '图片已转换为 Base64 并嵌入 Markdown；导出 MD 后会保留图片数据。',
-                    saved === false ? 'error' : 'success'
-                );
+                setImageEncodeOutput(await imageUrlToDataUrl(value));
+                imageStatus('图片已转换为 Data URL / Base64。编码结果已单独保留，可复制或到「插入 Markdown」中插入。', 'success');
             } catch (error) {
-                imageStatus('Base64 编码失败：' + (error.message || error) + '。若是外部图片链接，可能被图片服务器的跨域策略拦截，可改用“以图片链接插入 MD”。', 'error');
+                imageStatus('图片编码失败：' + (error.message || error) + '。外部图片可能不允许跨域读取。', 'error');
             } finally {
-                button.textContent = '转 Base64 嵌入 MD';
-                updateImageUrlInsertButtons();
+                button.disabled = false;
+                button.textContent = '转换为 Base64';
             }
+        }
+
+        async function encodeUploadedImage() {
+            if (!imageSourceBlob) { imageStatus('请先在「图片上传」中选择图片。', 'error'); return; }
+            try {
+                setImageEncodeOutput(await imageBlobDataUrl(imageSourceBlob));
+                imageStatus('已将上传原图编码为 Data URL / Base64；尚未插入 Markdown。', 'success');
+            } catch (error) { imageStatus('原图编码失败：' + (error.message || error), 'error'); }
+        }
+
+        async function encodeGeneratedImage() {
+            if (!imageResultUrl) { imageStatus('还没有生成结果。', 'error'); return; }
+            try {
+                setImageEncodeOutput(await imageUrlToDataUrl(imageResultUrl));
+                imageStatus('已将生成结果编码为 Data URL / Base64；尚未插入 Markdown。', 'success');
+            } catch (error) {
+                imageStatus('生成图编码失败：' + (error.message || error) + '。图片服务可能限制跨域读取。', 'error');
+            }
+        }
+
+        async function copyEncodedImage() {
+            const value = document.getElementById('imageEncodeOutput').value;
+            if (!value) return;
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(value);
+                } else {
+                    const field = document.getElementById('imageEncodeOutput');
+                    field.focus(); field.select();
+                    if (!document.execCommand('copy')) throw new Error('浏览器拒绝复制。');
+                }
+                imageStatus('Base64 编码结果已复制。', 'success');
+            } catch (error) { imageStatus('复制失败：' + (error.message || error), 'error'); }
+        }
+
+        function insertEncodedImageIntoMarkdown() {
+            const dataUrl = document.getElementById('imageEncodeOutput').value.trim();
+            const alt = document.getElementById('imageInsertAlt').value.trim() || '图片';
+            if (!dataUrl) { imageStatus('请先在「图片编码」中生成 Base64 结果。', 'error'); return; }
+            try {
+                const saved = insertMarkdownImage(alt, dataUrl);
+                imageStatus(saved === false ? '编码图片已插入，但本地自动保存空间可能不足；请立即导出 MD 备份。' : '编码结果已单独插入当前 Markdown 文档。', saved === false ? 'error' : 'success');
+            } catch (error) { imageStatus('编码结果插入失败：' + (error.message || error), 'error'); }
         }
 
         async function insertSourceImageIntoMarkdown() {
@@ -2005,6 +2085,8 @@
             document.getElementById('imageResultImage').src = url;
             document.getElementById('imageResultPreview').hidden = false;
             document.getElementById('imageResultCaption').textContent = modelName + ' · ' + new Date().toLocaleString('zh-CN');
+            document.getElementById('imageResultGroup').open = true;
+            document.getElementById('encodeGeneratedImageBtn').disabled = false;
             if (!document.getElementById('imageInsertUrl').value.trim()) {
                 document.getElementById('imageInsertUrl').value = url;
                 document.getElementById('imageInsertAlt').value = 'AI 生成图片';
@@ -2105,9 +2187,9 @@
                 const response = await fetch(imageResultUrl);
                 if (!response.ok) throw new Error('HTTP ' + response.status);
                 setImageSource(await response.blob(), '上一次生成的图片');
-                document.getElementById('imageTaskMode').value = 'edit';
+                document.getElementById('imageEditGroup').open = true;
                 updateImageTaskLabel();
-                imageStatus('已将生成结果设为参考图。输入新的编辑指令即可继续修改。', 'success');
+                imageStatus('已将生成结果设为改图参考图。现在可在「AI 改图」中单独填写修改要求并执行。', 'success');
             } catch (error) {
                 imageStatus('无法读取结果图片（可能受跨域限制）。请先下载结果，再重新上传进行编辑。', 'error');
             }
@@ -2115,12 +2197,16 @@
 
         async function generateImage() {
             if (imageRunning) return;
+            const mode = getImageTaskMode();
+            const activeButton = document.getElementById(mode === 'edit' ? 'editImageBtn' : 'generateImageBtn');
+            const defaultLabel = mode === 'edit' ? '开始改图' : mode === 'transparent' ? '生成透明 PNG' : '开始生成';
             imageRunning = true;
             activeImageTaskId = '';
             document.getElementById('imageTaskWrap').hidden = true;
+            document.getElementById('editImageBtn').disabled = true;
             document.getElementById('generateImageBtn').disabled = true;
-            document.getElementById('generateImageBtn').textContent = '正在生成…';
-            imageStatus('正在准备请求…');
+            activeButton.textContent = mode === 'edit' ? '正在改图…' : '正在生成…';
+            imageStatus(mode === 'edit' ? '正在准备 AI 改图请求…' : '正在准备 AI 生图请求…');
             try {
                 if (activeImageModel === 'gpt') await runGptImage();
                 else await runQwenImage();
@@ -2132,16 +2218,20 @@
                 imageStatus(error.message || String(error), 'error');
             } finally {
                 imageRunning = false;
-                document.getElementById('generateImageBtn').disabled = false;
+                activeButton.textContent = defaultLabel;
                 updateImageTaskLabel();
             }
         }
 
         function initImageGenerator() {
             document.getElementById('imageModel').addEventListener('change', updateImageModel);
-            document.getElementById('imageTaskMode').addEventListener('change', updateImageTaskLabel);
+            document.getElementById('createImageMode').addEventListener('change', updateImageTaskLabel);
             document.getElementById('insertImageBase64Btn').disabled = true;
             document.getElementById('copyImageUrlBtn').disabled = true;
+            document.getElementById('insertEncodedImageBtn').disabled = true;
+            document.getElementById('copyEncodedImageBtn').disabled = true;
+            document.getElementById('encodeSourceImageBtn').disabled = true;
+            document.getElementById('encodeGeneratedImageBtn').disabled = true;
             document.getElementById('toggleChatKey').addEventListener('click', function () {
                 const field = document.getElementById('apiKey');
                 field.type = field.type === 'password' ? 'text' : 'password';
@@ -2157,9 +2247,11 @@
                 field.type = field.type === 'password' ? 'text' : 'password';
                 this.textContent = field.type === 'password' ? '显示' : '隐藏';
             });
-            document.getElementById('imagePrompt').addEventListener('input', updateImagePromptCount);
+            document.getElementById('editImagePrompt').addEventListener('input', updateImagePromptCount);
+            document.getElementById('createImagePrompt').addEventListener('input', updateImagePromptCount);
             updateImagePromptCount();
-            document.getElementById('generateImageBtn').addEventListener('click', generateImage);
+            document.getElementById('editImageBtn').addEventListener('click', function () { startImageGeneration('edit'); });
+            document.getElementById('generateImageBtn').addEventListener('click', function () { startImageGeneration(document.getElementById('createImageMode').value); });
             document.getElementById('insertImageBtn').addEventListener('click', insertGeneratedImageLink);
             document.getElementById('insertImageBase64Btn').addEventListener('click', insertGeneratedImageBase64);
             document.getElementById('copyImageUrlBtn').addEventListener('click', copyGeneratedImageUrl);
@@ -2169,7 +2261,11 @@
             document.getElementById('insertSourceImageBtn').addEventListener('click', insertSourceImageIntoMarkdown);
             document.getElementById('imageInsertUrl').addEventListener('input', updateImageUrlInsertButtons);
             document.getElementById('insertImageUrlBtn').addEventListener('click', insertImageUrlIntoMarkdown);
-            document.getElementById('insertImageUrlBase64Btn').addEventListener('click', insertImageUrlAsBase64);
+            document.getElementById('insertEncodedImageBtn').addEventListener('click', insertEncodedImageIntoMarkdown);
+            document.getElementById('encodeImageBtn').addEventListener('click', encodeImageInput);
+            document.getElementById('encodeSourceImageBtn').addEventListener('click', encodeUploadedImage);
+            document.getElementById('encodeGeneratedImageBtn').addEventListener('click', encodeGeneratedImage);
+            document.getElementById('copyEncodedImageBtn').addEventListener('click', copyEncodedImage);
             updateImageUrlInsertButtons();
             const imageInput = document.getElementById('imageInput');
             const imageDrop = document.getElementById('imageUploadDrop');
@@ -2180,7 +2276,7 @@
                     return;
                 }
                 setImageSource(file, file.name);
-                imageStatus('图片已载入并显示预览；没有提交任何生成请求。默认模式是文生图，如需修改这张图，请手动切换到“图像编辑”模式。');
+                imageStatus('图片已上传并预览。需要修改时请单独打开「AI 改图」；需要写入文档时请单独打开「插入 Markdown」。');
             };
             imageInput.addEventListener('change', event => acceptImageFile(event.target.files && event.target.files[0]));
             ['dragenter', 'dragover'].forEach(name => imageDrop.addEventListener(name, event => {
@@ -2195,7 +2291,6 @@
                 const file = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
                 acceptImageFile(file);
             });
-            document.getElementById('imagePrompt').addEventListener('input', saveImageSettings);
             document.getElementById('imageApiKey').addEventListener('input', saveImageSettings);
             document.getElementById('hfToken').addEventListener('input', saveImageSettings);
             document.getElementById('rememberImageKey').addEventListener('change', saveImageSettings);
