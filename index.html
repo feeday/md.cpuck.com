@@ -224,15 +224,11 @@
         .image-result-caption{font-size:.72rem;color:var(--text-secondary);margin-top:7px;overflow-wrap:anywhere}
         .image-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
         .image-actions .btn{min-width:0;padding:0 8px;font-size:.76rem}
-        .image-document-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}
+        .image-document-insert{margin-top:12px;padding:12px;border:1px solid rgba(125,211,252,.2);border-radius:13px;background:rgba(2,6,23,.24)}
+        .image-document-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
         .image-document-actions .btn{height:auto;min-height:40px;min-width:0;padding:8px 9px;white-space:normal;line-height:1.35;font-size:.76rem}
         .image-document-actions .btn:last-child:nth-child(odd){grid-column:1/-1}
-        .image-section-hint{padding:9px 10px;margin:0 0 12px;border:1px solid rgba(56,189,248,.2);border-radius:10px;background:rgba(56,189,248,.07);font-size:.75rem;line-height:1.55;color:var(--text-secondary);overflow-wrap:anywhere}
-        .image-edit-source-thumb{display:block;width:72px;height:72px;object-fit:cover;border-radius:10px;border:1px solid var(--border-light);margin:0 0 9px}
-        .image-section-footnote{margin-top:9px}
-        .image-encode-output{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.7rem;overflow-wrap:anywhere;word-break:break-all;min-height:96px}
-        .image-check-label{display:flex;align-items:center;gap:7px;font-size:.76rem;text-transform:none;letter-spacing:0;margin:8px 0}
-        .image-status-global{padding:10px 12px;border:1px solid var(--border-light);border-radius:12px;background:rgba(0,0,0,.18);margin:10px 0 12px;min-height:42px}
+        .image-document-insert .form-group{margin-bottom:9px}
         .image-status.success{color:var(--theme-green)}
         .image-status.error{color:#fca5a5}
         .export-btn{padding:0;width:36px;min-width:36px;flex:0 0 36px}.export-btn svg{width:19px;height:19px;display:block;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
@@ -311,127 +307,155 @@
                     <span class="sidebar-heading-label">TOOLS</span>
                 </div>
                 <div class="sidebar-groups">
-                <details class="sidebar-group" name="sidebar-tools" id="imageUploadGroup" open>
-                    <summary class="sidebar-group-summary"><span class="sidebar-group-icon">📤</span><span class="sidebar-group-copy"><span class="sidebar-group-title">图片上传</span><span class="sidebar-group-desc">只选择、预览、替换或移除图片</span></span><span class="sidebar-group-chevron">⌄</span></summary>
+                <details class="sidebar-group" name="sidebar-tools" open>
+                    <summary class="sidebar-group-summary">
+                        <span class="sidebar-group-icon" aria-hidden="true">🖼️</span>
+                        <span class="sidebar-group-copy">
+                            <span class="sidebar-group-title">图像工具</span>
+                            <span class="sidebar-group-desc">上传预览、图像生成、明确编辑与 MD 插图</span>
+                        </span>
+                        <span class="sidebar-group-chevron" aria-hidden="true">⌄</span>
+                    </summary>
                     <div class="sidebar-group-body">
+                        <section class="sidebar-subsection">
+                            <div class="sidebar-subsection-title">📤 图片上传与预览</div>
                         <div class="form-group">
-                            <label for="imageInput">选择本地图片</label>
-                            <div class="image-upload-drop" id="imageUploadDrop">
-                                <input id="imageInput" class="glass-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif">
-                                <p class="small">支持 PNG、JPG、WebP、GIF。这里只上传和预览，不会改图，也不会插入文档。</p>
-                            </div>
-                            <div class="image-source" id="imageSourcePreview">
-                                <img id="imageSourceThumb" alt="已上传图片预览">
-                                <div class="image-source-info" id="imageSourceInfo">尚未选择图片</div>
-                                <button class="btn secondary" id="removeImageSource" type="button">移除</button>
-                            </div>
-                        </div>
+                    <label for="imageInput">📷 选择图片（仅上传预览）</label>
+                    <div class="image-upload-drop" id="imageUploadDrop">
+                        <input id="imageInput" class="glass-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif">
+                        <p class="small">选择或拖入图片只会载入预览，不会自动提交 AI 改图。</p>
                     </div>
-                </details>
-
-                <details class="sidebar-group" name="sidebar-tools" id="imageEditGroup">
-                    <summary class="sidebar-group-summary"><span class="sidebar-group-icon">🪄</span><span class="sidebar-group-copy"><span class="sidebar-group-title">AI 改图</span><span class="sidebar-group-desc">对已上传的参考图执行修改</span></span><span class="sidebar-group-chevron">⌄</span></summary>
-                    <div class="sidebar-group-body">
-                        <img id="editSourceThumb" class="image-edit-source-thumb" alt="当前 AI 改图参考图预览" hidden>
-                        <div class="image-section-hint" id="editSourceStatus">还没有参考图。请先到「图片上传」选择一张图片。</div>
-                        <div class="form-group">
-                            <label for="editImagePrompt">修改要求 <span class="prompt-count" id="editImagePromptCount">0 字</span></label>
-                            <textarea id="editImagePrompt" class="glass-input" rows="4" placeholder="例如：保留人物身份和构图，只把背景改成雪山；不要改变人物面部。"></textarea>
-                        </div>
-                        <button class="btn purple full" id="editImageBtn" type="button" disabled>开始改图</button>
-                        <p class="small image-section-footnote">只修改当前参考图。生成结果不会自动插入 Markdown。</p>
+                    <div class="image-source" id="imageSourcePreview">
+                        <img id="imageSourceThumb" alt="参考图预览">
+                        <div class="image-source-info" id="imageSourceInfo">参考图片已载入</div>
+                        <button class="btn secondary" id="removeImageSource" type="button">移除</button>
                     </div>
-                </details>
-
-                <details class="sidebar-group" name="sidebar-tools" id="imageCreateGroup">
-                    <summary class="sidebar-group-summary"><span class="sidebar-group-icon">✨</span><span class="sidebar-group-copy"><span class="sidebar-group-title">AI 生图</span><span class="sidebar-group-desc">只根据提示词生成新图片，不使用上传图</span></span><span class="sidebar-group-chevron">⌄</span></summary>
-                    <div class="sidebar-group-body">
-                        <div class="form-group">
-                            <label for="createImagePrompt">生成提示词 <span class="prompt-count" id="createImagePromptCount">0 字</span></label>
-                            <textarea id="createImagePrompt" class="glass-input" rows="4" placeholder="描述要生成的画面、主体、环境、光线、风格和构图…"></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label for="createImageMode">生成类型</label>
-                            <select id="createImageMode" class="glass-input"><option value="create" selected>普通文生图</option><option value="transparent" id="imageTransparentOption">透明 PNG（仅 Qwen）</option></select>
-                        </div>
-                        <button class="btn purple full" id="generateImageBtn" type="button">开始生成</button>
-                        <p class="small image-section-footnote">此处只负责生成新图。修改已有图片请使用独立的「AI 改图」。</p>
-                    </div>
-                </details>
-
-                <details class="sidebar-group" name="sidebar-tools" id="imageResultGroup">
-                    <summary class="sidebar-group-summary"><span class="sidebar-group-icon">🖼️</span><span class="sidebar-group-copy"><span class="sidebar-group-title">生成结果</span><span class="sidebar-group-desc">预览、复制链接、下载或设为改图参考图</span></span><span class="sidebar-group-chevron">⌄</span></summary>
-                    <div class="sidebar-group-body">
-                        <div id="imageResultPreview" class="image-result" hidden><img id="imageResultImage" alt="AI 生成结果"><div class="image-result-caption" id="imageResultCaption">生成结果</div></div>
-                        <div class="image-actions">
-                            <button class="btn secondary" id="copyImageUrlBtn" type="button" disabled>复制图片链接</button>
-                            <button class="btn secondary" id="downloadImageBtn" type="button" disabled>下载图片</button>
-                            <button class="btn secondary" id="useImageBtn" type="button" disabled>设为改图参考图</button>
-                        </div>
-                        <div id="imageTaskWrap" hidden>
-                            <label for="imageTaskId">查询之前提交的任务</label>
-                            <div class="actions"><input id="imageTaskId" class="glass-input" type="text" placeholder="task_..."><button id="queryImageTaskBtn" class="btn secondary" type="button">查询</button></div>
-                        </div>
-                        <p class="small image-section-footnote">这里仅管理生成结果，不会自动插入 Markdown。</p>
-                    </div>
-                </details>
-
-                <details class="sidebar-group" name="sidebar-tools" id="imageInsertGroup">
-                    <summary class="sidebar-group-summary"><span class="sidebar-group-icon">📄</span><span class="sidebar-group-copy"><span class="sidebar-group-title">插入 Markdown</span><span class="sidebar-group-desc">把原图、生成图或图片地址写入当前文档</span></span><span class="sidebar-group-chevron">⌄</span></summary>
-                    <div class="sidebar-group-body">
-                        <p class="small">先在中间编辑器定位光标，再执行插入。这里只写入 Markdown，不会改图或生成图片。</p>
-                        <div class="image-document-actions">
-                            <button class="btn secondary" id="insertSourceImageBtn" type="button" disabled>插入原图（Base64）</button>
-                            <button class="btn secondary" id="insertImageBtn" type="button" disabled>插入生成图链接</button>
-                            <button class="btn secondary" id="insertImageBase64Btn" type="button" disabled>插入生成图（Base64）</button>
-                        </div>
-                        <div class="form-group" style="margin-top:12px"><label for="imageInsertUrl">外部图片链接 / Data URL / Base64</label><input id="imageInsertUrl" class="glass-input" type="text" placeholder="https://example.com/image.png 或 data:image/png;base64,..."></div>
-                        <div class="form-group"><label for="imageInsertAlt">图片说明文字（可选）</label><input id="imageInsertAlt" class="glass-input" type="text" value="图片" placeholder="图片说明"></div>
-                        <div class="image-document-actions">
-                            <button class="btn secondary" id="insertImageUrlBtn" type="button" disabled>按图片源插入 MD</button>
-                            <button class="btn secondary" id="insertEncodedImageBtn" type="button" disabled>插入编码结果</button>
-                        </div>
-                    </div>
-                </details>
-
-                <details class="sidebar-group" name="sidebar-tools" id="imageEncodeGroup">
-                    <summary class="sidebar-group-summary"><span class="sidebar-group-icon">🔐</span><span class="sidebar-group-copy"><span class="sidebar-group-title">图片编码</span><span class="sidebar-group-desc">独立转换图片链接或 Base64，不自动写入文档</span></span><span class="sidebar-group-chevron">⌄</span></summary>
-                    <div class="sidebar-group-body">
-                        <div class="form-group"><label for="imageEncodeInput">图片链接 / Data URL / 原始 Base64</label><textarea id="imageEncodeInput" class="glass-input" rows="3" placeholder="粘贴 https:// 图片链接、data:image Base64 或原始 Base64…"></textarea></div>
-                        <div class="image-document-actions">
-                            <button class="btn secondary" id="encodeImageBtn" type="button">转换为 Base64</button>
-                            <button class="btn secondary" id="encodeSourceImageBtn" type="button" disabled>编码已上传原图</button>
-                            <button class="btn secondary" id="encodeGeneratedImageBtn" type="button" disabled>编码生成结果</button>
-                        </div>
-                        <div class="form-group" style="margin-top:12px"><label for="imageEncodeOutput">Base64 编码结果</label><textarea id="imageEncodeOutput" class="glass-input image-encode-output" rows="4" readonly placeholder="编码结果会显示在这里…"></textarea></div>
-                        <button class="btn secondary full" id="copyEncodedImageBtn" type="button" disabled>复制编码结果</button>
-                        <p class="small image-section-footnote">外部图片链接转 Base64 需要图片服务器允许跨域读取；失败时仍可在「插入 Markdown」中直接插入原链接。</p>
-                    </div>
-                </details>
-
-                <details class="sidebar-group" name="sidebar-tools" id="imageSettingsGroup">
-                    <summary class="sidebar-group-summary"><span class="sidebar-group-icon">⚙️</span><span class="sidebar-group-copy"><span class="sidebar-group-title">图像模型设置</span><span class="sidebar-group-desc">模型、API Key、分辨率、画幅和推理参数</span></span><span class="sidebar-group-chevron">⌄</span></summary>
-                    <div class="sidebar-group-body">
-                        <div class="form-group"><label for="imageModel">图像模型</label><select id="imageModel" class="glass-input"><option value="gpt">GPT Image 2 · APIMart</option><option value="qwen">Qwen Image 2.1 · Hugging Face</option></select></div>
-                        <section class="image-settings" id="imageGptSettings">
-                            <div class="form-group"><label for="imageApiKey">APIMart API Key</label><div class="key-input-row"><input id="imageApiKey" class="glass-input" type="password" placeholder="粘贴你的 APIMart API Key" autocomplete="off"><button class="key-toggle" id="toggleImageApiKey" type="button">显示</button></div></div>
-                            <div class="form-group"><label for="imageApiBaseUrl">图像 API Base URL</label><input id="imageApiBaseUrl" class="glass-input" type="url" value="https://api.apimart.ai" placeholder="https://api.apimart.ai"></div>
-                            <div class="form-group"><label for="imageModelId">图像模型 ID</label><input id="imageModelId" class="glass-input" value="gpt-image-2-ext" placeholder="gpt-image-2-ext"></div>
-                            <label class="image-check-label"><input id="rememberImageKey" type="checkbox"> 在此浏览器记住图像 API Key</label>
+                </div>
                         </section>
-                        <section class="image-settings" id="imageQwenSettings" hidden>
-                            <div class="form-group"><label for="hfToken">Hugging Face Token（可选）</label><div class="key-input-row"><input id="hfToken" class="glass-input" type="password" placeholder="hf_...；公开 Space 可留空" autocomplete="off"><button class="key-toggle" id="toggleHfToken" type="button">显示</button></div><p class="small"><a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener noreferrer">获取 Hugging Face Token ↗</a>；公开 Space 通常可留空。</p></div>
-                            <div class="image-row"><div class="form-group"><label for="qwenSteps">推理步数</label><select id="qwenSteps" class="glass-input"><option value="28">28 · 快速</option><option value="40" selected>40 · 推荐</option></select></div><div class="form-group"><label for="qwenSeed">随机种子</label><input id="qwenSeed" class="glass-input" type="number" min="0" max="2147483647" value="42"></div></div>
-                            <label class="image-check-label"><input id="randomSeed" type="checkbox" checked> 每次使用新随机种子</label>
-                            <label class="image-check-label"><input id="rememberHfToken" type="checkbox"> 在此浏览器记住 HF Token</label>
-                            <p class="small">Space：assembledchaos/qwen-image-2-1-studio</p>
+                        <div class="divider"></div>
+                        <section class="sidebar-subsection">
+                            <div class="sidebar-subsection-title">✨ AI 图像生成与改图</div>
+                        <div class="form-group">
+                    <label for="imageModel">🎨 生成模型</label>
+                    <select id="imageModel" class="glass-input">
+                        <option value="gpt">GPT Image 2 · APIMart</option>
+                        <option value="qwen">Qwen Image 2.1 · Hugging Face</option>
+                    </select>
+                </div>
+
+                <section class="image-settings" id="imageGptSettings">
+                    <div class="form-group">
+                        <label for="imageApiKey">APIMart API Key</label>
+                        <div class="key-input-row"><input id="imageApiKey" class="glass-input" type="password" placeholder="粘贴你的 APIMart API Key" autocomplete="off"><button class="key-toggle" id="toggleImageApiKey" type="button">显示</button></div>
+                    </div>
+                    <div class="form-group">
+                        <label for="imageApiBaseUrl">图像 API Base URL</label>
+                        <input id="imageApiBaseUrl" class="glass-input" type="url" value="https://api.apimart.ai" placeholder="https://api.apimart.ai">
+                    </div>
+                    <div class="form-group">
+                        <label for="imageModelId">图像模型 ID</label>
+                        <input id="imageModelId" class="glass-input" value="gpt-image-2-ext" placeholder="gpt-image-2-ext">
+                    </div>
+                    <label style="display:flex;align-items:center;gap:7px;font-size:.76rem;text-transform:none;letter-spacing:0">
+                        <input id="rememberImageKey" type="checkbox"> 在此浏览器记住图像 API Key
+                    </label>
+                </section>
+
+                <section class="image-settings" id="imageQwenSettings" hidden>
+                    <div class="form-group">
+                        <label for="hfToken">Hugging Face Token（可选）</label>
+                        <div class="key-input-row"><input id="hfToken" class="glass-input" type="password" placeholder="hf_...；公开 Space 可留空" autocomplete="off"><button class="key-toggle" id="toggleHfToken" type="button">显示</button></div>
+                        <p class="small"><a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener noreferrer">获取 Hugging Face Token ↗</a>；公开 Space 通常可留空。</p>
+                    </div>
+                    <div class="image-row">
+                        <div class="form-group">
+                            <label for="qwenSteps">推理步数</label>
+                            <select id="qwenSteps" class="glass-input"><option value="28">28 · 快速</option><option value="40" selected>40 · 推荐</option></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="qwenSeed">随机种子</label>
+                            <input id="qwenSeed" class="glass-input" type="number" min="0" max="2147483647" value="42">
+                        </div>
+                    </div>
+                    <label style="display:flex;align-items:center;gap:7px;font-size:.76rem;text-transform:none;letter-spacing:0">
+                        <input id="randomSeed" type="checkbox" checked> 每次使用新随机种子
+                    </label>
+                    <label style="display:flex;align-items:center;gap:7px;font-size:.76rem;text-transform:none;letter-spacing:0;margin-top:8px">
+                        <input id="rememberHfToken" type="checkbox"> 在此浏览器记住 HF Token
+                    </label>
+                    <p class="small">Space：assembledchaos/qwen-image-2-1-studio</p>
+                </section>
+
+                <div class="image-row">
+                    <div class="form-group" id="imageResolutionGroup">
+                        <label for="imageResolution">生成分辨率（GPT Image 2）</label>
+                        <select id="imageResolution" class="glass-input"><option value="1k">1K</option><option value="2k">2K</option><option value="4k">4K</option></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="imageAspect">画面比例</label>
+                        <select id="imageAspect" class="glass-input">
+                            <option value="1:1">1:1</option><option value="3:2">3:2</option><option value="2:3">2:3</option><option value="4:3">4:3</option><option value="3:4">3:4</option><option value="16:9">16:9</option><option value="9:16">9:16</option><option value="21:9">21:9</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="imageTaskMode">任务模式</label>
+                    <select id="imageTaskMode" class="glass-input">
+                        <option value="create" selected>文生图（默认，不修改上传图）</option>
+                        <option value="edit">图像编辑（明确选择后才改图）</option>
+                        <option value="transparent" id="imageTransparentOption">透明 PNG（仅 Qwen）</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="imagePrompt">提示词 / 编辑指令 <span class="prompt-count" id="imagePromptCount">0 字</span></label>
+                    <textarea id="imagePrompt" class="glass-input" rows="4" placeholder="文生图：描述要生成的画面；图像编辑：先手动选择“图像编辑”模式，再写修改要求…"></textarea>
+                </div>
+                <div class="actions-vertical">
+                    <button class="btn purple full" id="generateImageBtn" type="button">✦ 生成图片</button>
+                </div>
+                <div class="image-actions">
+                    <button class="btn secondary" id="copyImageUrlBtn" type="button" disabled>复制图片链接</button>
+                    <button class="btn secondary" id="downloadImageBtn" type="button" disabled>下载图片</button>
+                    <button class="btn secondary" id="useImageBtn" type="button" disabled>继续编辑此图</button>
+                </div>
+                <p class="small">生成结果可在下方插入 Markdown，也可复制链接、下载或继续编辑。</p>
+                <div id="imageStatus" class="image-status">默认是文生图。上传图片只会预览；如需修改上传图，请手动选择“图像编辑”，再点击“开始改图”。生成结果可在本区插入 Markdown。</div>
+                <div id="imageTaskWrap" hidden>
+                    <label for="imageTaskId">查询之前提交的任务</label>
+                    <div class="actions">
+                        <input id="imageTaskId" class="glass-input" type="text" placeholder="task_...">
+                        <button id="queryImageTaskBtn" class="btn secondary" type="button">查询</button>
+                    </div>
+                </div>
+                <div id="imageResultPreview" class="image-result" hidden>
+                    <img id="imageResultImage" alt="AI 生成结果">
+                    <div class="image-result-caption" id="imageResultCaption">生成结果</div>
+                </div>
+                <section class="image-document-insert">
+                    <div class="sidebar-subsection-title">📄 插入到 Markdown 文档</div>
+                    <p class="small">先在中间编辑器点击要插入的位置，再选择方式。选图和生成图都不会自动写入文档。</p>
+                    <div class="image-document-actions">
+                        <button class="btn secondary" id="insertSourceImageBtn" type="button" disabled>原图 Base64 插入 MD</button>
+                        <button class="btn secondary" id="insertImageBtn" type="button" disabled>生成图链接插入 MD</button>
+                        <button class="btn secondary" id="insertImageBase64Btn" type="button" disabled>生成图 Base64 嵌入 MD</button>
+                    </div>
+                    <div class="form-group" style="margin-top:12px">
+                        <label for="imageInsertUrl">外部图片链接 / Data URL / Base64</label>
+                        <input id="imageInsertUrl" class="glass-input" type="text" placeholder="https://example.com/image.png 或 data:image/png;base64,...">
+                    </div>
+                    <div class="form-group">
+                        <label for="imageInsertAlt">图片说明文字（可选）</label>
+                        <input id="imageInsertAlt" class="glass-input" type="text" value="图片" placeholder="图片说明">
+                    </div>
+                    <div class="image-document-actions">
+                        <button class="btn secondary" id="insertImageUrlBtn" type="button" disabled>以图片链接插入 MD</button>
+                        <button class="btn secondary" id="insertImageUrlBase64Btn" type="button" disabled>转 Base64 嵌入 MD</button>
+                    </div>
+                    <p class="small">支持 HTTPS 图片链接、data:image Base64；也可粘贴纯 Base64（按 PNG 处理）。链接插入保留外链；Base64 会把图片数据写入 MD，外链转 Base64 受图片服务器跨域权限限制。</p>
+                </section>
                         </section>
-                        <div class="image-row"><div class="form-group" id="imageResolutionGroup"><label for="imageResolution">生成分辨率（GPT Image 2）</label><select id="imageResolution" class="glass-input"><option value="1k">1K</option><option value="2k">2K</option><option value="4k">4K</option></select></div><div class="form-group"><label for="imageAspect">画面比例</label><select id="imageAspect" class="glass-input"><option value="1:1">1:1</option><option value="3:2">3:2</option><option value="2:3">2:3</option><option value="4:3">4:3</option><option value="3:4">3:4</option><option value="16:9">16:9</option><option value="9:16">9:16</option><option value="21:9">21:9</option></select></div></div>
-                        <select id="imageTaskMode" hidden><option value="create" selected>create</option><option value="edit">edit</option><option value="transparent">transparent</option></select>
-                        <textarea id="imagePrompt" hidden></textarea>
                     </div>
                 </details>
-                <div id="imageStatus" class="image-status image-status-global" role="status" aria-live="polite">就绪。上传、改图、生图、编码和插入 Markdown 是彼此独立的操作。</div>
                 <details class="sidebar-group" name="sidebar-tools">
                     <summary class="sidebar-group-summary">
                         <span class="sidebar-group-icon" aria-hidden="true">📝</span>
@@ -583,7 +607,7 @@
     </div>
 
     <script>
-        const DEFAULT_DOC = '# MDE Markdown 工作台\n\n欢迎使用 AI + Markdown 工作台。\n\n- 左侧图片上传、AI 改图、AI 生图、生成结果、Markdown 插入、图片编码和模型设置均为独立操作区。\n- 左侧文本工具：AI 对话、文档修改、查找替换和语音朗读。\n- 中间：编辑 Markdown 源文档。\n- 右侧：实时渲染排版效果。\n- 支持导出 Markdown 和 Word（DOCX）。\n\n图片上传不会自动改图，生成结果不会自动插入文档。';
+        const DEFAULT_DOC = '# MDE Markdown 工作台\n\n欢迎使用 AI + Markdown 工作台。\n\n- 左侧图像工具：上传预览、文生图、手动选择图像编辑，并将原图/生成图/图片链接/Base64 插入文档。\n- 左侧文本工具：AI 对话、文档修改、查找替换和语音朗读。\n- 中间：编辑 Markdown 源文档。\n- 右侧：实时预览排版效果。\n- 支持导出 Markdown、和 Word（DOCX）。\n\n你可以把 AI 对话回答或生成图片直接插入当前文档。';
         const STORAGE_KEYS = {
             doc: 'md_editor_document',
             apiKey: 'md_editor_api_key',
@@ -1486,16 +1510,14 @@
         let activeImageTaskId = '';
 
         function updateImagePromptCount() {
-            const editCount = document.getElementById('editImagePrompt').value.length;
-            const createCount = document.getElementById('createImagePrompt').value.length;
-            document.getElementById('editImagePromptCount').textContent = editCount.toLocaleString('zh-CN') + ' 字';
-            document.getElementById('createImagePromptCount').textContent = createCount.toLocaleString('zh-CN') + ' 字';
+            const count = document.getElementById('imagePrompt').value.length;
+            document.getElementById('imagePromptCount').textContent = count.toLocaleString('zh-CN') + ' 字';
         }
 
         function imageStatus(message, type) {
             const box = document.getElementById('imageStatus');
             box.textContent = message;
-            box.className = 'image-status image-status-global' + (type ? ' ' + type : '');
+            box.className = 'image-status' + (type ? ' ' + type : '');
         }
 
         function normalizeImageBase(value) {
@@ -1518,34 +1540,8 @@
         }
 
         function updateImageTaskLabel() {
-            const editButton = document.getElementById('editImageBtn');
-            const createButton = document.getElementById('generateImageBtn');
-            editButton.disabled = !imageSourceBlob || imageRunning;
-            createButton.disabled = imageRunning;
-            if (!imageRunning) {
-                createButton.textContent = document.getElementById('createImageMode').value === 'transparent' ? '生成透明 PNG' : '开始生成';
-            }
-        }
-
-        function startImageGeneration(mode) {
-            const isEdit = mode === 'edit';
-            const promptId = isEdit ? 'editImagePrompt' : 'createImagePrompt';
-            const prompt = document.getElementById(promptId).value.trim();
-            if (isEdit && !imageSourceBlob) {
-                imageStatus('请先在「图片上传」中选择参考图，再执行 AI 改图。', 'error');
-                return;
-            }
-            if (!prompt) {
-                imageStatus(isEdit ? '请先填写修改要求。' : '请先填写生成提示词。', 'error');
-                return;
-            }
-            if (mode === 'transparent' && activeImageModel !== 'qwen') {
-                imageStatus('透明 PNG 模式仅支持 Qwen，请先在「图像模型设置」中选择 Qwen。', 'error');
-                return;
-            }
-            document.getElementById('imagePrompt').value = prompt;
-            document.getElementById('imageTaskMode').value = mode;
-            generateImage();
+            const mode = getImageTaskMode();
+            document.getElementById('generateImageBtn').textContent = mode === 'edit' ? '开始改图' : mode === 'transparent' ? '生成透明 PNG' : '生成图片';
         }
 
         function updateImageModel() {
@@ -1556,8 +1552,8 @@
             document.getElementById('imageResolutionGroup').hidden = activeImageModel !== 'gpt';
             if (activeImageModel !== 'gpt') document.getElementById('imageTaskWrap').hidden = true;
             else if (activeImageTaskId) document.getElementById('imageTaskWrap').hidden = false;
-            if (activeImageModel === 'gpt' && document.getElementById('createImageMode').value === 'transparent') {
-                document.getElementById('createImageMode').value = 'create';
+            if (activeImageModel === 'gpt' && document.getElementById('imageTaskMode').value === 'transparent') {
+                document.getElementById('imageTaskMode').value = 'create';
             }
             updateImageTaskLabel();
             saveImageSettings();
@@ -1592,13 +1588,9 @@
             imageSourceName = name || '参考图片';
             imageSourceObjectUrl = URL.createObjectURL(blob);
             document.getElementById('imageSourceThumb').src = imageSourceObjectUrl;
-            document.getElementById('editSourceThumb').src = imageSourceObjectUrl;
-            document.getElementById('editSourceThumb').hidden = false;
             document.getElementById('imageSourceInfo').textContent = imageSourceName + ' · ' + (blob.size / 1048576).toFixed(2) + ' MB';
             document.getElementById('imageSourcePreview').classList.add('show');
             document.getElementById('insertSourceImageBtn').disabled = false;
-            document.getElementById('encodeSourceImageBtn').disabled = false;
-            document.getElementById('editSourceStatus').textContent = '当前参考图：' + imageSourceName + ' · ' + (blob.size / 1048576).toFixed(2) + ' MB';
             updateImageTaskLabel();
         }
 
@@ -1610,11 +1602,7 @@
             document.getElementById('imageInput').value = '';
             document.getElementById('imageSourcePreview').classList.remove('show');
             document.getElementById('imageSourceThumb').removeAttribute('src');
-            document.getElementById('editSourceThumb').removeAttribute('src');
-            document.getElementById('editSourceThumb').hidden = true;
             document.getElementById('insertSourceImageBtn').disabled = true;
-            document.getElementById('encodeSourceImageBtn').disabled = true;
-            document.getElementById('editSourceStatus').textContent = '还没有参考图。请先到「图片上传」选择一张图片。';
             if (document.getElementById('imageTaskMode').value === 'edit') {
                 document.getElementById('imageTaskMode').value = 'create';
             }
@@ -1697,9 +1685,8 @@
 
         function updateImageUrlInsertButtons() {
             const hasValue = !!document.getElementById('imageInsertUrl').value.trim();
-            const hasEncodedValue = !!document.getElementById('imageEncodeOutput').value.trim();
             document.getElementById('insertImageUrlBtn').disabled = !hasValue;
-            document.getElementById('insertEncodedImageBtn').disabled = !hasEncodedValue;
+            document.getElementById('insertImageUrlBase64Btn').disabled = !hasValue;
         }
 
         function insertImageUrlIntoMarkdown() {
@@ -1716,80 +1703,33 @@
             }
         }
 
-        async function imageUrlToDataUrl(value) {
-            const source = normalizeMarkdownImageSource(value);
-            if (/^data:image\//i.test(source)) return source;
-            const response = await fetch(source);
-            if (!response.ok) throw new Error('图片读取失败：HTTP ' + response.status);
-            const blob = await response.blob();
-            if (!blob.type || !blob.type.startsWith('image/')) throw new Error('链接返回的内容不是图片。');
-            return await imageBlobDataUrl(blob);
-        }
-
-        function setImageEncodeOutput(value) {
-            document.getElementById('imageEncodeOutput').value = value || '';
-            document.getElementById('copyEncodedImageBtn').disabled = !value;
-            updateImageUrlInsertButtons();
-        }
-
-        async function encodeImageInput() {
-            const button = document.getElementById('encodeImageBtn');
-            const value = document.getElementById('imageEncodeInput').value.trim();
-            if (!value) { imageStatus('请先粘贴图片链接或 Base64 数据。', 'error'); return; }
+        async function insertImageUrlAsBase64() {
+            const field = document.getElementById('imageInsertUrl');
+            const button = document.getElementById('insertImageUrlBase64Btn');
+            const alt = document.getElementById('imageInsertAlt').value.trim() || '图片';
             button.disabled = true;
             button.textContent = '正在编码…';
             try {
-                setImageEncodeOutput(await imageUrlToDataUrl(value));
-                imageStatus('图片已转换为 Data URL / Base64。编码结果已单独保留，可复制或到「插入 Markdown」中插入。', 'success');
-            } catch (error) {
-                imageStatus('图片编码失败：' + (error.message || error) + '。外部图片可能不允许跨域读取。', 'error');
-            } finally {
-                button.disabled = false;
-                button.textContent = '转换为 Base64';
-            }
-        }
-
-        async function encodeUploadedImage() {
-            if (!imageSourceBlob) { imageStatus('请先在「图片上传」中选择图片。', 'error'); return; }
-            try {
-                setImageEncodeOutput(await imageBlobDataUrl(imageSourceBlob));
-                imageStatus('已将上传原图编码为 Data URL / Base64；尚未插入 Markdown。', 'success');
-            } catch (error) { imageStatus('原图编码失败：' + (error.message || error), 'error'); }
-        }
-
-        async function encodeGeneratedImage() {
-            if (!imageResultUrl) { imageStatus('还没有生成结果。', 'error'); return; }
-            try {
-                setImageEncodeOutput(await imageUrlToDataUrl(imageResultUrl));
-                imageStatus('已将生成结果编码为 Data URL / Base64；尚未插入 Markdown。', 'success');
-            } catch (error) {
-                imageStatus('生成图编码失败：' + (error.message || error) + '。图片服务可能限制跨域读取。', 'error');
-            }
-        }
-
-        async function copyEncodedImage() {
-            const value = document.getElementById('imageEncodeOutput').value;
-            if (!value) return;
-            try {
-                if (navigator.clipboard && window.isSecureContext) {
-                    await navigator.clipboard.writeText(value);
-                } else {
-                    const field = document.getElementById('imageEncodeOutput');
-                    field.focus(); field.select();
-                    if (!document.execCommand('copy')) throw new Error('浏览器拒绝复制。');
+                const source = normalizeMarkdownImageSource(field.value);
+                let dataUrl = source;
+                if (!/^data:image\//i.test(source)) {
+                    const response = await fetch(source);
+                    if (!response.ok) throw new Error('图片读取失败：HTTP ' + response.status);
+                    const blob = await response.blob();
+                    if (!blob.type || !blob.type.startsWith('image/')) throw new Error('链接返回的内容不是图片。');
+                    dataUrl = await imageBlobDataUrl(blob);
                 }
-                imageStatus('Base64 编码结果已复制。', 'success');
-            } catch (error) { imageStatus('复制失败：' + (error.message || error), 'error'); }
-        }
-
-        function insertEncodedImageIntoMarkdown() {
-            const dataUrl = document.getElementById('imageEncodeOutput').value.trim();
-            const alt = document.getElementById('imageInsertAlt').value.trim() || '图片';
-            if (!dataUrl) { imageStatus('请先在「图片编码」中生成 Base64 结果。', 'error'); return; }
-            try {
                 const saved = insertMarkdownImage(alt, dataUrl);
-                imageStatus(saved === false ? '编码图片已插入，但本地自动保存空间可能不足；请立即导出 MD 备份。' : '编码结果已单独插入当前 Markdown 文档。', saved === false ? 'error' : 'success');
-            } catch (error) { imageStatus('编码结果插入失败：' + (error.message || error), 'error'); }
+                imageStatus(
+                    saved === false ? 'Base64 图片已插入，但本地自动保存空间可能不足；请立即导出 MD 备份。' : '图片已转换为 Base64 并嵌入 Markdown；导出 MD 后会保留图片数据。',
+                    saved === false ? 'error' : 'success'
+                );
+            } catch (error) {
+                imageStatus('Base64 编码失败：' + (error.message || error) + '。若是外部图片链接，可能被图片服务器的跨域策略拦截，可改用“以图片链接插入 MD”。', 'error');
+            } finally {
+                button.textContent = '转 Base64 嵌入 MD';
+                updateImageUrlInsertButtons();
+            }
         }
 
         async function insertSourceImageIntoMarkdown() {
@@ -1812,7 +1752,7 @@
                 imageStatus('原图插入失败：' + (error.message || error), 'error');
             } finally {
                 button.disabled = !imageSourceBlob;
-                button.textContent = '插入原图（Base64）';
+                button.textContent = '原图 Base64 插入 MD';
             }
         }
 
@@ -2092,8 +2032,6 @@
             document.getElementById('imageResultImage').src = url;
             document.getElementById('imageResultPreview').hidden = false;
             document.getElementById('imageResultCaption').textContent = modelName + ' · ' + new Date().toLocaleString('zh-CN');
-            document.getElementById('imageResultGroup').open = true;
-            document.getElementById('encodeGeneratedImageBtn').disabled = false;
             if (!document.getElementById('imageInsertUrl').value.trim()) {
                 document.getElementById('imageInsertUrl').value = url;
                 document.getElementById('imageInsertAlt').value = 'AI 生成图片';
@@ -2145,7 +2083,7 @@
                 imageStatus('Base64 嵌入失败：' + (error.message || error) + '。如果服务商禁止跨域读取，请使用“插入图片链接”或下载图片。', 'error');
             } finally {
                 button.disabled = !imageResultUrl;
-                button.textContent = '插入生成图（Base64）';
+                button.textContent = '生成图 Base64 嵌入 MD';
             }
         }
 
@@ -2194,9 +2132,9 @@
                 const response = await fetch(imageResultUrl);
                 if (!response.ok) throw new Error('HTTP ' + response.status);
                 setImageSource(await response.blob(), '上一次生成的图片');
-                document.getElementById('imageEditGroup').open = true;
+                document.getElementById('imageTaskMode').value = 'edit';
                 updateImageTaskLabel();
-                imageStatus('已将生成结果设为改图参考图。现在可在「AI 改图」中单独填写修改要求并执行。', 'success');
+                imageStatus('已将生成结果设为参考图。输入新的编辑指令即可继续修改。', 'success');
             } catch (error) {
                 imageStatus('无法读取结果图片（可能受跨域限制）。请先下载结果，再重新上传进行编辑。', 'error');
             }
@@ -2204,16 +2142,12 @@
 
         async function generateImage() {
             if (imageRunning) return;
-            const mode = getImageTaskMode();
-            const activeButton = document.getElementById(mode === 'edit' ? 'editImageBtn' : 'generateImageBtn');
-            const defaultLabel = mode === 'edit' ? '开始改图' : mode === 'transparent' ? '生成透明 PNG' : '开始生成';
             imageRunning = true;
             activeImageTaskId = '';
             document.getElementById('imageTaskWrap').hidden = true;
-            document.getElementById('editImageBtn').disabled = true;
             document.getElementById('generateImageBtn').disabled = true;
-            activeButton.textContent = mode === 'edit' ? '正在改图…' : '正在生成…';
-            imageStatus(mode === 'edit' ? '正在准备 AI 改图请求…' : '正在准备 AI 生图请求…');
+            document.getElementById('generateImageBtn').textContent = '正在生成…';
+            imageStatus('正在准备请求…');
             try {
                 if (activeImageModel === 'gpt') await runGptImage();
                 else await runQwenImage();
@@ -2221,25 +2155,20 @@
                 if (activeImageModel === 'gpt' && activeImageTaskId) {
                     document.getElementById('imageTaskWrap').hidden = false;
                     document.getElementById('imageTaskId').value = activeImageTaskId;
-                    document.getElementById('imageResultGroup').open = true;
                 }
                 imageStatus(error.message || String(error), 'error');
             } finally {
                 imageRunning = false;
-                activeButton.textContent = defaultLabel;
+                document.getElementById('generateImageBtn').disabled = false;
                 updateImageTaskLabel();
             }
         }
 
         function initImageGenerator() {
             document.getElementById('imageModel').addEventListener('change', updateImageModel);
-            document.getElementById('createImageMode').addEventListener('change', updateImageTaskLabel);
+            document.getElementById('imageTaskMode').addEventListener('change', updateImageTaskLabel);
             document.getElementById('insertImageBase64Btn').disabled = true;
             document.getElementById('copyImageUrlBtn').disabled = true;
-            document.getElementById('insertEncodedImageBtn').disabled = true;
-            document.getElementById('copyEncodedImageBtn').disabled = true;
-            document.getElementById('encodeSourceImageBtn').disabled = true;
-            document.getElementById('encodeGeneratedImageBtn').disabled = true;
             document.getElementById('toggleChatKey').addEventListener('click', function () {
                 const field = document.getElementById('apiKey');
                 field.type = field.type === 'password' ? 'text' : 'password';
@@ -2255,11 +2184,9 @@
                 field.type = field.type === 'password' ? 'text' : 'password';
                 this.textContent = field.type === 'password' ? '显示' : '隐藏';
             });
-            document.getElementById('editImagePrompt').addEventListener('input', updateImagePromptCount);
-            document.getElementById('createImagePrompt').addEventListener('input', updateImagePromptCount);
+            document.getElementById('imagePrompt').addEventListener('input', updateImagePromptCount);
             updateImagePromptCount();
-            document.getElementById('editImageBtn').addEventListener('click', function () { startImageGeneration('edit'); });
-            document.getElementById('generateImageBtn').addEventListener('click', function () { startImageGeneration(document.getElementById('createImageMode').value); });
+            document.getElementById('generateImageBtn').addEventListener('click', generateImage);
             document.getElementById('insertImageBtn').addEventListener('click', insertGeneratedImageLink);
             document.getElementById('insertImageBase64Btn').addEventListener('click', insertGeneratedImageBase64);
             document.getElementById('copyImageUrlBtn').addEventListener('click', copyGeneratedImageUrl);
@@ -2269,11 +2196,7 @@
             document.getElementById('insertSourceImageBtn').addEventListener('click', insertSourceImageIntoMarkdown);
             document.getElementById('imageInsertUrl').addEventListener('input', updateImageUrlInsertButtons);
             document.getElementById('insertImageUrlBtn').addEventListener('click', insertImageUrlIntoMarkdown);
-            document.getElementById('insertEncodedImageBtn').addEventListener('click', insertEncodedImageIntoMarkdown);
-            document.getElementById('encodeImageBtn').addEventListener('click', encodeImageInput);
-            document.getElementById('encodeSourceImageBtn').addEventListener('click', encodeUploadedImage);
-            document.getElementById('encodeGeneratedImageBtn').addEventListener('click', encodeGeneratedImage);
-            document.getElementById('copyEncodedImageBtn').addEventListener('click', copyEncodedImage);
+            document.getElementById('insertImageUrlBase64Btn').addEventListener('click', insertImageUrlAsBase64);
             updateImageUrlInsertButtons();
             const imageInput = document.getElementById('imageInput');
             const imageDrop = document.getElementById('imageUploadDrop');
@@ -2284,7 +2207,7 @@
                     return;
                 }
                 setImageSource(file, file.name);
-                imageStatus('图片已上传并预览。需要修改时请单独打开「AI 改图」；需要写入文档时请单独打开「插入 Markdown」。');
+                imageStatus('图片已载入并显示预览；没有提交任何生成请求。默认模式是文生图，如需修改这张图，请手动切换到“图像编辑”模式。');
             };
             imageInput.addEventListener('change', event => acceptImageFile(event.target.files && event.target.files[0]));
             ['dragenter', 'dragover'].forEach(name => imageDrop.addEventListener(name, event => {
@@ -2299,6 +2222,7 @@
                 const file = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
                 acceptImageFile(file);
             });
+            document.getElementById('imagePrompt').addEventListener('input', saveImageSettings);
             document.getElementById('imageApiKey').addEventListener('input', saveImageSettings);
             document.getElementById('hfToken').addEventListener('input', saveImageSettings);
             document.getElementById('rememberImageKey').addEventListener('change', saveImageSettings);
