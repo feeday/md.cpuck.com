@@ -363,7 +363,7 @@
                 </div>
                     </div>
                 </details>
-                <details class="sidebar-group" name="sidebar-tools">
+                <details id="imageGenGroup" class="sidebar-group" name="sidebar-tools">
                     <summary class="sidebar-group-summary">
                         <span class="sidebar-group-icon" aria-hidden="true">✨</span>
                         <span class="sidebar-group-copy">
@@ -514,7 +514,8 @@
                     </div>
                 </div>
 
-                \n<div class="form-group">
+                
+<div class="form-group">
                     <label for="aiInstruction">✨ 模型编辑指令</label>
                     <select id="aiInstruction" class="glass-input">
                         <option value="请检查下面文档的错别字、语病、代码错误等，并直接输出修正后的正文。禁止输出解释废话，严禁使用 markdown 标记包裹。">🔍 纠错与格式检查</option>
@@ -2189,6 +2190,8 @@
                 }
                 document.getElementById('imageTaskMode').value = 'edit';
                 updateImageTaskLabel();
+                const imageGenGroup = document.getElementById('imageGenGroup');
+                if (imageGenGroup) imageGenGroup.open = true;
                 document.getElementById('imagePrompt').scrollIntoView({ behavior: 'smooth', block: 'center' });
                 document.getElementById('imagePrompt').focus();
                 imageStatus('已切换到图像编辑模式。输入修改要求后，点击“开始改图”。', 'success');
