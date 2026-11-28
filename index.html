@@ -1672,7 +1672,7 @@
                 return 'data:image/png;base64,' + standardBase64;
             }
 
-            if (!/^https?:\/\/[^/\s?#]+(?:[/?#][^\s]*)?$/i.test(raw)) {
+            if (!/^https?:\/\/[^/\s?#]+(?:[/?#][^\r\n]*)?$/i.test(raw)) {
                 throw new Error('请输入完整的 HTTP/HTTPS 图片地址，或 data:image Base64 数据。');
             }
             return encodeURI(raw).replace(/\(/g, '%28').replace(/\)/g, '%29');
