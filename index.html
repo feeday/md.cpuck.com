@@ -302,12 +302,99 @@
                     <div class="sidebar-heading-icon" aria-hidden="true">✦</div>
                     <div class="sidebar-heading-copy">
                         <strong>工作台</strong>
-                        <span>图像工具 · 文本工具</span>
+                        <span>文本工具 · 图像工具</span>
                     </div>
                     <span class="sidebar-heading-label">TOOLS</span>
                 </div>
                 <div class="sidebar-groups">
                 <details class="sidebar-group" name="sidebar-tools" open>
+                    <summary class="sidebar-group-summary">
+                        <span class="sidebar-group-icon" aria-hidden="true">📝</span>
+                        <span class="sidebar-group-copy">
+                            <span class="sidebar-group-title">文本工具</span>
+                            <span class="sidebar-group-desc">AI 对话与文档修改、查找替换和朗读</span>
+                        </span>
+                        <span class="sidebar-group-chevron" aria-hidden="true">⌄</span>
+                    </summary>
+                    <div class="sidebar-group-body">
+                        <section class="sidebar-subsection">
+                            <div class="sidebar-subsection-title">💬 AI 对话</div>
+                        <div class="form-group">
+                    <label for="apiKey">🔑 对话 API Key</label>
+                    <div class="key-input-row"><input id="apiKey" class="glass-input" type="password" placeholder="请输入你的 API Key" autocomplete="off"><button class="key-toggle" id="toggleChatKey" type="button">显示</button></div>
+                </div>
+                <div class="form-group">
+                    <label for="apiBaseUrl">🌐 API URL</label>
+                    <input id="apiBaseUrl" class="glass-input" value="https://api.poixe.com/v1/" placeholder="https://api.poixe.com/v1/">
+                </div>
+                <div class="form-group">
+                    <label for="modelName">🤖 自定义对话模型</label>
+                    <input id="modelName" class="glass-input" value="deepseek-v4-flash" placeholder="例如：deepseek-v4-flash / gpt-4.1">
+                </div>
+
+                <div class="form-group">
+                    <label for="chatPrompt">💬 API 对话</label>
+                    <textarea id="chatPrompt" class="glass-input" rows="3" placeholder="输入问题，使用上方自定义 API 地址、密钥和模型进行对话…"></textarea>
+                    <div class="chat-actions">
+                        <button class="btn" id="chatSendBtn" type="button">发送对话</button>
+                        <button class="btn secondary" id="chatInsertBtn" type="button" disabled>插入回答到 MD</button>
+                    </div>
+                    <div class="chat-actions chat-diagnostics">
+                        <button class="btn secondary" id="chatTestBtn" type="button">测试 API 连接</button>
+                        <span class="small">浏览器直连服务商；测试会发送一条很短的请求。</span>
+                    </div>
+                    <div id="chatStatus" class="chat-status">支持 OpenAI 兼容的 /v1/chat/completions 接口。</div>
+                    <div id="chatLog" class="chat-log" aria-live="polite"><div class="chat-empty">对话内容会显示在这里。回答可一键插入 Markdown。</div></div>
+                    <div style="display:flex;justify-content:flex-end;margin-top:8px">
+                        <button class="btn secondary" id="chatClearBtn" type="button" style="height:32px;font-size:.76rem">清空对话</button>
+                    </div>
+                </div>
+                        </section>
+                        <div class="divider"></div>
+                        <section class="sidebar-subsection">
+                            <div class="sidebar-subsection-title">✍️ AI 文档修改</div>
+<div class="form-group">
+                    <label for="aiInstruction">✨ 模型编辑指令</label>
+                    <select id="aiInstruction" class="glass-input">
+                        <option value="请检查下面文档的错别字、语病、代码错误等，并直接输出修正后的正文。禁止输出解释废话，严禁使用 markdown 标记包裹。">🔍 纠错与格式检查</option>
+                        <option value="请将下面的文档润色为表达清晰、结构完整、排版规范的中文文档。保留原格式，只输出修改后的结果，严禁使用 markdown 标记包裹。">🪄 润色并规范排版</option>
+                        <option value="请扩写下面的内容，补充必要说明、层级标题、列表和示例。保留原格式，只输出结果，严禁使用 markdown 标记包裹。">📝 扩写丰富内容</option>
+                        <option value="请精简下面的内容，让内容更简洁但不丢失关键信息。保留原格式，只输出结果，严禁使用 markdown 标记包裹。">✂️ 精简提取核心</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="customInstruction">自定义补充要求</label>
+                    <textarea id="customInstruction" rows="6" placeholder="例如：改成产品说明书风格，增加 FAQ，保留代码块..."></textarea>
+                </div>
+                <div class="actions">
+                    <button class="btn" id="aiReplaceBtn" onclick="runAiEdit('replace')">全文替换</button>
+                    <button class="btn secondary" id="aiAppendBtn" onclick="runAiEdit('append')">追加结果</button>
+                </div>
+                <p class="small" id="aiStatus" style="margin-top:10px; color: var(--theme-green);"></p>
+                        </section>
+                        <div class="divider"></div>
+                        <section class="sidebar-subsection">
+                            <div class="sidebar-subsection-title">🔎 查找替换与语音朗读</div>
+                        <div class="form-group">
+                    <button class="btn secondary full" id="ttsToggleBtn" type="button">🔊 语音朗读</button>
+                    <p class="small" id="ttsStatus" style="margin-top:7px">朗读当前 Markdown 文字；自动跳过图片 Base64 和链接地址；使用浏览器本地中文语音，不上传文档。</p>
+                </div>
+
+                <div class="form-group">
+                    <label>🔍 查找与替换</label>
+                    <input type="text" id="findInput" class="glass-input" placeholder="查找内容 (支持正则)" style="margin-bottom:8px">
+                    <input type="text" id="replaceInput" class="glass-input" placeholder="替换为...">
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+                    <label style="margin:0;display:flex;align-items:center;gap:6px;cursor:pointer">
+                        <input type="checkbox" id="useRegex" checked> 用正则
+                    </label>
+                    <button class="btn secondary" style="height:32px;padding:0 12px;font-size:.8rem" onclick="executeReplace()">🔄 替换</button>
+                </div>
+                        </section>
+                    </div>
+                </details>
+                <details class="sidebar-group" name="sidebar-tools">
                     <summary class="sidebar-group-summary">
                         <span class="sidebar-group-icon" aria-hidden="true">🖼️</span>
                         <span class="sidebar-group-copy">
@@ -453,93 +540,6 @@
                     </div>
                     <p class="small">支持 HTTPS 图片链接、data:image Base64；也可粘贴纯 Base64（按 PNG 处理）。链接插入保留外链；Base64 会把图片数据写入 MD，外链转 Base64 受图片服务器跨域权限限制。</p>
                 </section>
-                        </section>
-                    </div>
-                </details>
-                <details class="sidebar-group" name="sidebar-tools">
-                    <summary class="sidebar-group-summary">
-                        <span class="sidebar-group-icon" aria-hidden="true">📝</span>
-                        <span class="sidebar-group-copy">
-                            <span class="sidebar-group-title">文本工具</span>
-                            <span class="sidebar-group-desc">AI 对话与文档修改、查找替换和朗读</span>
-                        </span>
-                        <span class="sidebar-group-chevron" aria-hidden="true">⌄</span>
-                    </summary>
-                    <div class="sidebar-group-body">
-                        <section class="sidebar-subsection">
-                            <div class="sidebar-subsection-title">💬 AI 对话</div>
-                        <div class="form-group">
-                    <label for="apiKey">🔑 对话 API Key</label>
-                    <div class="key-input-row"><input id="apiKey" class="glass-input" type="password" placeholder="请输入你的 API Key" autocomplete="off"><button class="key-toggle" id="toggleChatKey" type="button">显示</button></div>
-                </div>
-                <div class="form-group">
-                    <label for="apiBaseUrl">🌐 API URL</label>
-                    <input id="apiBaseUrl" class="glass-input" value="https://api.poixe.com/v1/" placeholder="https://api.poixe.com/v1/">
-                </div>
-                <div class="form-group">
-                    <label for="modelName">🤖 自定义对话模型</label>
-                    <input id="modelName" class="glass-input" value="deepseek-v4-flash" placeholder="例如：deepseek-v4-flash / gpt-4.1">
-                </div>
-
-                <div class="form-group">
-                    <label for="chatPrompt">💬 API 对话</label>
-                    <textarea id="chatPrompt" class="glass-input" rows="3" placeholder="输入问题，使用上方自定义 API 地址、密钥和模型进行对话…"></textarea>
-                    <div class="chat-actions">
-                        <button class="btn" id="chatSendBtn" type="button">发送对话</button>
-                        <button class="btn secondary" id="chatInsertBtn" type="button" disabled>插入回答到 MD</button>
-                    </div>
-                    <div class="chat-actions chat-diagnostics">
-                        <button class="btn secondary" id="chatTestBtn" type="button">测试 API 连接</button>
-                        <span class="small">浏览器直连服务商；测试会发送一条很短的请求。</span>
-                    </div>
-                    <div id="chatStatus" class="chat-status">支持 OpenAI 兼容的 /v1/chat/completions 接口。</div>
-                    <div id="chatLog" class="chat-log" aria-live="polite"><div class="chat-empty">对话内容会显示在这里。回答可一键插入 Markdown。</div></div>
-                    <div style="display:flex;justify-content:flex-end;margin-top:8px">
-                        <button class="btn secondary" id="chatClearBtn" type="button" style="height:32px;font-size:.76rem">清空对话</button>
-                    </div>
-                </div>
-                        </section>
-                        <div class="divider"></div>
-                        <section class="sidebar-subsection">
-                            <div class="sidebar-subsection-title">✍️ AI 文档修改</div>
-<div class="form-group">
-                    <label for="aiInstruction">✨ 模型编辑指令</label>
-                    <select id="aiInstruction" class="glass-input">
-                        <option value="请检查下面文档的错别字、语病、代码错误等，并直接输出修正后的正文。禁止输出解释废话，严禁使用 markdown 标记包裹。">🔍 纠错与格式检查</option>
-                        <option value="请将下面的文档润色为表达清晰、结构完整、排版规范的中文文档。保留原格式，只输出修改后的结果，严禁使用 markdown 标记包裹。">🪄 润色并规范排版</option>
-                        <option value="请扩写下面的内容，补充必要说明、层级标题、列表和示例。保留原格式，只输出结果，严禁使用 markdown 标记包裹。">📝 扩写丰富内容</option>
-                        <option value="请精简下面的内容，让内容更简洁但不丢失关键信息。保留原格式，只输出结果，严禁使用 markdown 标记包裹。">✂️ 精简提取核心</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="customInstruction">自定义补充要求</label>
-                    <textarea id="customInstruction" rows="6" placeholder="例如：改成产品说明书风格，增加 FAQ，保留代码块..."></textarea>
-                </div>
-                <div class="actions">
-                    <button class="btn" id="aiReplaceBtn" onclick="runAiEdit('replace')">全文替换</button>
-                    <button class="btn secondary" id="aiAppendBtn" onclick="runAiEdit('append')">追加结果</button>
-                </div>
-                <p class="small" id="aiStatus" style="margin-top:10px; color: var(--theme-green);"></p>
-                        </section>
-                        <div class="divider"></div>
-                        <section class="sidebar-subsection">
-                            <div class="sidebar-subsection-title">🔎 查找替换与语音朗读</div>
-                        <div class="form-group">
-                    <button class="btn secondary full" id="ttsToggleBtn" type="button">🔊 语音朗读</button>
-                    <p class="small" id="ttsStatus" style="margin-top:7px">朗读当前 Markdown 文字；自动跳过图片 Base64 和链接地址；使用浏览器本地中文语音，不上传文档。</p>
-                </div>
-
-                <div class="form-group">
-                    <label>🔍 查找与替换</label>
-                    <input type="text" id="findInput" class="glass-input" placeholder="查找内容 (支持正则)" style="margin-bottom:8px">
-                    <input type="text" id="replaceInput" class="glass-input" placeholder="替换为...">
-                </div>
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-                    <label style="margin:0;display:flex;align-items:center;gap:6px;cursor:pointer">
-                        <input type="checkbox" id="useRegex" checked> 用正则
-                    </label>
-                    <button class="btn secondary" style="height:32px;padding:0 12px;font-size:.8rem" onclick="executeReplace()">🔄 替换</button>
-                </div>
                         </section>
                     </div>
                 </details>
