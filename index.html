@@ -258,6 +258,42 @@
             .image-insert-actions{grid-template-columns:1fr 1fr}
         }
 
+
+        /* Sidebar: grouped, collapsible workspace */
+        .panel-scroll{padding:16px}
+        .sidebar-heading{display:flex;align-items:center;gap:10px;margin:1px 1px 14px;padding:2px 1px 14px;border-bottom:1px solid var(--border-light)}
+        .sidebar-heading-icon{width:38px;height:38px;flex:0 0 38px;display:grid;place-items:center;border-radius:13px;background:linear-gradient(135deg,var(--theme-blue),var(--theme-purple));color:#07111f;font-size:20px;font-weight:900;box-shadow:0 6px 18px rgba(56,189,248,.16)}
+        .sidebar-heading-copy{display:flex;flex-direction:column;gap:3px;min-width:0}
+        .sidebar-heading-copy strong{font-size:1rem;font-weight:850;letter-spacing:.02em}
+        .sidebar-heading-copy span{font-size:.72rem;color:var(--text-tertiary)}
+        .sidebar-heading-label{margin-left:auto;padding:5px 8px;border:1px solid var(--border-light);border-radius:999px;color:var(--text-tertiary);font-size:.6rem;font-weight:850;letter-spacing:.1em}
+        .sidebar-groups{display:grid;gap:9px}
+        .sidebar-group{border:1px solid rgba(148,163,184,.15);border-radius:15px;background:rgba(15,23,42,.48);overflow:hidden;transition:border-color .18s ease,background .18s ease,box-shadow .18s ease}
+        .sidebar-group[open]{border-color:rgba(56,189,248,.34);background:rgba(15,23,42,.72);box-shadow:0 10px 28px rgba(0,0,0,.12)}
+        .sidebar-group-summary{list-style:none;display:flex;align-items:center;gap:11px;min-height:64px;padding:10px 12px;cursor:pointer;user-select:none}
+        .sidebar-group-summary::-webkit-details-marker{display:none}
+        .sidebar-group-summary:focus-visible{outline:2px solid var(--theme-blue);outline-offset:-3px;border-radius:13px}
+        .sidebar-group-icon{width:36px;height:36px;flex:0 0 36px;display:grid;place-items:center;border:1px solid rgba(56,189,248,.13);border-radius:11px;background:rgba(56,189,248,.1);font-size:17px}
+        .sidebar-group:nth-child(2) .sidebar-group-icon{background:rgba(167,139,250,.12);border-color:rgba(167,139,250,.15)}
+        .sidebar-group:nth-child(3) .sidebar-group-icon{background:rgba(52,211,153,.1);border-color:rgba(52,211,153,.14)}
+        .sidebar-group:nth-child(4) .sidebar-group-icon{background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.14)}
+        .sidebar-group-copy{display:flex;flex:1;flex-direction:column;gap:3px;min-width:0}
+        .sidebar-group-title{color:var(--text-primary);font-size:.84rem;font-weight:850;line-height:1.3}
+        .sidebar-group-desc{color:var(--text-tertiary);font-size:.68rem;line-height:1.35;overflow-wrap:anywhere}
+        .sidebar-group-chevron{flex:0 0 auto;color:var(--text-tertiary);font-size:1.1rem;line-height:1;transition:transform .18s ease,color .18s ease}
+        .sidebar-group[open] .sidebar-group-chevron{transform:rotate(180deg);color:var(--theme-blue)}
+        .sidebar-group-body{padding:14px 13px 15px;border-top:1px solid rgba(148,163,184,.12);animation:sidebarReveal .16s ease}
+        .sidebar-group-body .divider{margin:12px 0}
+        .sidebar-group-body .hint{margin-bottom:10px}
+        .sidebar-group-body .form-group:last-child{margin-bottom:0}
+        .sidebar-ad{margin:16px 0 0}
+        @keyframes sidebarReveal{from{opacity:.65;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}
+        @media(max-width:980px){
+            .panel-scroll{padding:14px}
+            .sidebar-heading{margin-bottom:12px}
+            .sidebar-group-summary{min-height:60px}
+        }
+
 </style>
 </head>
 <body>
@@ -265,18 +301,26 @@
 
         <aside class="panel" id="sidePanel">
             <div class="panel-scroll">
-                <div class="sidebar-ad" aria-label="Google AdSense 广告">
-                    <div class="sidebar-ad-label">广告</div>
-                    <ins class="adsbygoogle"
-                         style="display:block;width:100%;height:100px"
-                         data-ad-client="ca-pub-1964437526797765"
-                         data-ad-slot="1907914008"
-                         ></ins>
-                    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+                <div class="sidebar-heading">
+                    <div class="sidebar-heading-icon" aria-hidden="true">✦</div>
+                    <div class="sidebar-heading-copy">
+                        <strong>工作台</strong>
+                        <span>图片 · AI · Markdown</span>
+                    </div>
+                    <span class="sidebar-heading-label">TOOLS</span>
                 </div>
-
-                <div class="workspace-section-title">图片工作区</div>
-                <div class="form-group">
+                <div class="sidebar-groups">
+                <details class="sidebar-group" name="sidebar-tools" open>
+                    <summary class="sidebar-group-summary">
+                        <span class="sidebar-group-icon" aria-hidden="true">🖼️</span>
+                        <span class="sidebar-group-copy">
+                            <span class="sidebar-group-title">图片工作区</span>
+                            <span class="sidebar-group-desc">上传图片、原图插入与快速改图</span>
+                        </span>
+                        <span class="sidebar-group-chevron" aria-hidden="true">⌄</span>
+                    </summary>
+                    <div class="sidebar-group-body">
+                        <div class="form-group">
                     <label for="imageInput">📷 上传图片（顶部统一入口）</label>
                     <div class="image-upload-drop" id="imageUploadDrop">
                         <input id="imageInput" class="glass-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif">
@@ -292,9 +336,19 @@
                         <button class="btn purple" id="quickEditImageBtn" type="button">AI 改图</button>
                     </div>
                 </div>
-
-                <div class="workspace-section-title">模型分析图</div>
-                <div class="form-group">
+                    </div>
+                </details>
+                <details class="sidebar-group" name="sidebar-tools">
+                    <summary class="sidebar-group-summary">
+                        <span class="sidebar-group-icon" aria-hidden="true">🔍</span>
+                        <span class="sidebar-group-copy">
+                            <span class="sidebar-group-title">图片分析</span>
+                            <span class="sidebar-group-desc">视觉理解、分析结果插入文档</span>
+                        </span>
+                        <span class="sidebar-group-chevron" aria-hidden="true">⌄</span>
+                    </summary>
+                    <div class="sidebar-group-body">
+                        <div class="form-group">
                     <label for="imageAnalysisPrompt">分析要求</label>
                     <textarea id="imageAnalysisPrompt" class="glass-input" rows="3">请用中文详细分析这张图片，包括主体与场景、构图与视角、光线和色彩、可辨认文字、图像质量及明显异常。对无法确认的信息请明确说明，不要臆测。</textarea>
                     <div class="chat-actions">
@@ -307,65 +361,19 @@
                         <div id="imageAnalysisText" class="analysis-result-text"></div>
                     </div>
                 </div>
-
-                <div class="divider"></div>
-                <div class="workspace-section-title">语音朗读</div>
-                <div class="form-group">
-                    <button class="btn secondary full" id="ttsToggleBtn" type="button">🔊 语音朗读</button>
-                    <p class="small" id="ttsStatus" style="margin-top:7px">朗读当前 Markdown 文字；自动跳过图片 Base64 和链接地址；使用浏览器本地中文语音，不上传文档。</p>
-                </div>
-
-                <div class="divider"></div>
-                <div class="workspace-section-title">查找与替换</div>
-                <div class="form-group">
-                    <label>🔍 查找与替换</label>
-                    <input type="text" id="findInput" class="glass-input" placeholder="查找内容 (支持正则)" style="margin-bottom:8px">
-                    <input type="text" id="replaceInput" class="glass-input" placeholder="替换为...">
-                </div>
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-                    <label style="margin:0;display:flex;align-items:center;gap:6px;cursor:pointer">
-                        <input type="checkbox" id="useRegex" checked> 用正则
-                    </label>
-                    <button class="btn secondary" style="height:32px;padding:0 12px;font-size:.8rem" onclick="executeReplace()">🔄 替换</button>
-                </div>
-
-                <p class="hint">一个图片入口，支持原图插入 Markdown、AI 改图和连续编辑。</p>
-                <div class="workspace-section-title">对话 API 配置</div>
-
-                <div class="form-group">
-                    <label for="apiKey">🔑 对话 API Key</label>
-                    <div class="key-input-row"><input id="apiKey" class="glass-input" type="password" placeholder="请输入你的 API Key" autocomplete="off"><button class="key-toggle" id="toggleChatKey" type="button">显示</button></div>
-                </div>
-                <div class="form-group">
-                    <label for="apiBaseUrl">🌐 API URL</label>
-                    <input id="apiBaseUrl" class="glass-input" value="https://api.poixe.com/v1/" placeholder="https://api.poixe.com/v1/">
-                </div>
-                <div class="form-group">
-                    <label for="modelName">🤖 自定义对话模型</label>
-                    <input id="modelName" class="glass-input" value="deepseek-v4-flash" placeholder="例如：deepseek-v4-flash / gpt-4.1">
-                </div>
-
-                <div class="form-group">
-                    <label for="chatPrompt">💬 API 对话</label>
-                    <textarea id="chatPrompt" class="glass-input" rows="3" placeholder="输入问题，使用上方自定义 API 地址、密钥和模型进行对话…"></textarea>
-                    <div class="chat-actions">
-                        <button class="btn" id="chatSendBtn" type="button">发送对话</button>
-                        <button class="btn secondary" id="chatInsertBtn" type="button" disabled>插入回答到 MD</button>
                     </div>
-                    <div class="chat-actions chat-diagnostics">
-                        <button class="btn secondary" id="chatTestBtn" type="button">测试 API 连接</button>
-                        <span class="small">浏览器直连服务商；测试会发送一条很短的请求。</span>
-                    </div>
-                    <div id="chatStatus" class="chat-status">支持 OpenAI 兼容的 /v1/chat/completions 接口。</div>
-                    <div id="chatLog" class="chat-log" aria-live="polite"><div class="chat-empty">对话内容会显示在这里。回答可一键插入 Markdown。</div></div>
-                    <div style="display:flex;justify-content:flex-end;margin-top:8px">
-                        <button class="btn secondary" id="chatClearBtn" type="button" style="height:32px;font-size:.76rem">清空对话</button>
-                    </div>
-                </div>
-
-                <div class="divider"></div>
-                <div class="workspace-section-title">图像生成与编辑</div>
-                <div class="form-group">
+                </details>
+                <details class="sidebar-group" name="sidebar-tools">
+                    <summary class="sidebar-group-summary">
+                        <span class="sidebar-group-icon" aria-hidden="true">✨</span>
+                        <span class="sidebar-group-copy">
+                            <span class="sidebar-group-title">AI 图像生成</span>
+                            <span class="sidebar-group-desc">GPT Image 与 Qwen · 参数与结果</span>
+                        </span>
+                        <span class="sidebar-group-chevron" aria-hidden="true">⌄</span>
+                    </summary>
+                    <div class="sidebar-group-body">
+                        <div class="form-group">
                     <label for="imageModel">🎨 生成模型</label>
                     <select id="imageModel" class="glass-input">
                         <option value="gpt">GPT Image 2 · APIMart</option>
@@ -463,10 +471,50 @@
                     <img id="imageResultImage" alt="AI 生成结果">
                     <div class="image-result-caption" id="imageResultCaption">生成结果</div>
                 </div>
-
-                <div class="divider"></div>
+                    </div>
+                </details>
+                <details class="sidebar-group" name="sidebar-tools">
+                    <summary class="sidebar-group-summary">
+                        <span class="sidebar-group-icon" aria-hidden="true">💬</span>
+                        <span class="sidebar-group-copy">
+                            <span class="sidebar-group-title">AI 助手</span>
+                            <span class="sidebar-group-desc">API 对话、纠错润色与文档扩写</span>
+                        </span>
+                        <span class="sidebar-group-chevron" aria-hidden="true">⌄</span>
+                    </summary>
+                    <div class="sidebar-group-body">
+                        <div class="form-group">
+                    <label for="apiKey">🔑 对话 API Key</label>
+                    <div class="key-input-row"><input id="apiKey" class="glass-input" type="password" placeholder="请输入你的 API Key" autocomplete="off"><button class="key-toggle" id="toggleChatKey" type="button">显示</button></div>
+                </div>
+                <div class="form-group">
+                    <label for="apiBaseUrl">🌐 API URL</label>
+                    <input id="apiBaseUrl" class="glass-input" value="https://api.poixe.com/v1/" placeholder="https://api.poixe.com/v1/">
+                </div>
+                <div class="form-group">
+                    <label for="modelName">🤖 自定义对话模型</label>
+                    <input id="modelName" class="glass-input" value="deepseek-v4-flash" placeholder="例如：deepseek-v4-flash / gpt-4.1">
+                </div>
 
                 <div class="form-group">
+                    <label for="chatPrompt">💬 API 对话</label>
+                    <textarea id="chatPrompt" class="glass-input" rows="3" placeholder="输入问题，使用上方自定义 API 地址、密钥和模型进行对话…"></textarea>
+                    <div class="chat-actions">
+                        <button class="btn" id="chatSendBtn" type="button">发送对话</button>
+                        <button class="btn secondary" id="chatInsertBtn" type="button" disabled>插入回答到 MD</button>
+                    </div>
+                    <div class="chat-actions chat-diagnostics">
+                        <button class="btn secondary" id="chatTestBtn" type="button">测试 API 连接</button>
+                        <span class="small">浏览器直连服务商；测试会发送一条很短的请求。</span>
+                    </div>
+                    <div id="chatStatus" class="chat-status">支持 OpenAI 兼容的 /v1/chat/completions 接口。</div>
+                    <div id="chatLog" class="chat-log" aria-live="polite"><div class="chat-empty">对话内容会显示在这里。回答可一键插入 Markdown。</div></div>
+                    <div style="display:flex;justify-content:flex-end;margin-top:8px">
+                        <button class="btn secondary" id="chatClearBtn" type="button" style="height:32px;font-size:.76rem">清空对话</button>
+                    </div>
+                </div>
+
+                \n<div class="form-group">
                     <label for="aiInstruction">✨ 模型编辑指令</label>
                     <select id="aiInstruction" class="glass-input">
                         <option value="请检查下面文档的错别字、语病、代码错误等，并直接输出修正后的正文。禁止输出解释废话，严禁使用 markdown 标记包裹。">🔍 纠错与格式检查</option>
@@ -484,12 +532,48 @@
                     <button class="btn secondary" id="aiAppendBtn" onclick="runAiEdit('append')">追加结果</button>
                 </div>
                 <p class="small" id="aiStatus" style="margin-top:10px; color: var(--theme-green);"></p>
+                    </div>
+                </details>
+                <details class="sidebar-group" name="sidebar-tools">
+                    <summary class="sidebar-group-summary">
+                        <span class="sidebar-group-icon" aria-hidden="true">📝</span>
+                        <span class="sidebar-group-copy">
+                            <span class="sidebar-group-title">文档工具</span>
+                            <span class="sidebar-group-desc">查找替换、正则处理与语音朗读</span>
+                        </span>
+                        <span class="sidebar-group-chevron" aria-hidden="true">⌄</span>
+                    </summary>
+                    <div class="sidebar-group-body">
+                        <div class="form-group">
+                    <button class="btn secondary full" id="ttsToggleBtn" type="button">🔊 语音朗读</button>
+                    <p class="small" id="ttsStatus" style="margin-top:7px">朗读当前 Markdown 文字；自动跳过图片 Base64 和链接地址；使用浏览器本地中文语音，不上传文档。</p>
+                </div>
 
-                <div class="divider"></div>
-
-             
-
-
+                <div class="form-group">
+                    <label>🔍 查找与替换</label>
+                    <input type="text" id="findInput" class="glass-input" placeholder="查找内容 (支持正则)" style="margin-bottom:8px">
+                    <input type="text" id="replaceInput" class="glass-input" placeholder="替换为...">
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+                    <label style="margin:0;display:flex;align-items:center;gap:6px;cursor:pointer">
+                        <input type="checkbox" id="useRegex" checked> 用正则
+                    </label>
+                    <button class="btn secondary" style="height:32px;padding:0 12px;font-size:.8rem" onclick="executeReplace()">🔄 替换</button>
+                </div>
+                    </div>
+                </details>
+                </div>
+                <div class="sidebar-ad" aria-label="Google AdSense 广告区">
+                    <div class="sidebar-ad-label">广告</div>
+                    <ins class="adsbygoogle"
+                         style="display:block;width:100%;height:100px"
+                         data-ad-client="ca-pub-1964437526797765"
+                         data-ad-slot="1907914008"
+                         ></ins>
+                    
+                
+                    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+                </div>
 
             </div>
         </aside>
