@@ -246,17 +246,8 @@
         .sidebar-ad{margin:0 0 16px;padding:8px;border:1px solid var(--border-light);border-radius:13px;background:rgba(0,0,0,.18);overflow:hidden;min-height:0}
         .sidebar-ad-label{font-size:.68rem;color:var(--text-tertiary);text-align:center;letter-spacing:.12em;margin:0 0 5px}
         .sidebar-ad .adsbygoogle{display:block;width:100%;height:100px}
-        .analysis-result{margin-top:10px;padding:11px;border:1px solid var(--border-light);border-radius:12px;background:rgba(0,0,0,.22)}
-        .analysis-result[hidden]{display:none!important}
-        .analysis-result-title{font-size:.76rem;font-weight:800;color:#c4b5fd;margin-bottom:7px}
-        .analysis-result-text{font-size:.8rem;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--text-primary);max-height:360px;overflow:auto}
-        .image-insert-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
-        .image-insert-actions .btn{min-width:0;padding:0 8px;font-size:.76rem}
         .home-btn{color:#7dd3fc;text-decoration:none;margin-left:auto;flex:0 0 auto;white-space:nowrap}
         .home-btn:hover{color:#fff}
-        @media(max-width:980px){
-            .image-insert-actions{grid-template-columns:1fr 1fr}
-        }
 
 
         /* Sidebar: grouped, collapsible workspace */
@@ -275,8 +266,6 @@
         .sidebar-group-summary:focus-visible{outline:2px solid var(--theme-blue);outline-offset:-3px;border-radius:13px}
         .sidebar-group-icon{width:36px;height:36px;flex:0 0 36px;display:grid;place-items:center;border:1px solid rgba(56,189,248,.13);border-radius:11px;background:rgba(56,189,248,.1);font-size:17px}
         .sidebar-group:nth-child(2) .sidebar-group-icon{background:rgba(167,139,250,.12);border-color:rgba(167,139,250,.15)}
-        .sidebar-group:nth-child(3) .sidebar-group-icon{background:rgba(52,211,153,.1);border-color:rgba(52,211,153,.14)}
-        .sidebar-group:nth-child(4) .sidebar-group-icon{background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.14)}
         .sidebar-group-copy{display:flex;flex:1;flex-direction:column;gap:3px;min-width:0}
         .sidebar-group-title{color:var(--text-primary);font-size:.84rem;font-weight:850;line-height:1.3}
         .sidebar-group-desc{color:var(--text-tertiary);font-size:.68rem;line-height:1.35;overflow-wrap:anywhere}
@@ -286,6 +275,12 @@
         .sidebar-group-body .divider{margin:12px 0}
         .sidebar-group-body .hint{margin-bottom:10px}
         .sidebar-group-body .form-group:last-child{margin-bottom:0}
+        .sidebar-subsection{min-width:0}
+        .sidebar-subsection-title{display:flex;align-items:center;gap:8px;margin:2px 1px 11px;color:#7dd3fc;font-size:.78rem;font-weight:850;letter-spacing:.02em}
+        .sidebar-subsection-title::after{content:"";height:1px;flex:1;background:linear-gradient(90deg,rgba(125,211,252,.28),transparent)}
+        .document-insert-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+        .document-insert-grid .btn{height:auto;min-height:40px;min-width:0;padding:8px 9px;white-space:normal;line-height:1.35;font-size:.76rem}
+        .document-insert-grid .btn:last-child{grid-column:1/-1}
         .sidebar-ad{margin:16px 0 0}
         @keyframes sidebarReveal{from{opacity:.65;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}
         @media(max-width:980px){
@@ -305,7 +300,7 @@
                     <div class="sidebar-heading-icon" aria-hidden="true">✦</div>
                     <div class="sidebar-heading-copy">
                         <strong>工作台</strong>
-                        <span>图片 · AI · Markdown</span>
+                        <span>图像工具 · 文本工具</span>
                     </div>
                     <span class="sidebar-heading-label">TOOLS</span>
                 </div>
@@ -314,65 +309,33 @@
                     <summary class="sidebar-group-summary">
                         <span class="sidebar-group-icon" aria-hidden="true">🖼️</span>
                         <span class="sidebar-group-copy">
-                            <span class="sidebar-group-title">图片工作区</span>
-                            <span class="sidebar-group-desc">上传图片、原图插入与快速改图</span>
+                            <span class="sidebar-group-title">图像工具</span>
+                            <span class="sidebar-group-desc">上传、预览、AI 改图与图像生成</span>
                         </span>
                         <span class="sidebar-group-chevron" aria-hidden="true">⌄</span>
                     </summary>
                     <div class="sidebar-group-body">
+                        <section class="sidebar-subsection">
+                            <div class="sidebar-subsection-title">📤 图片上传与预览</div>
                         <div class="form-group">
-                    <label for="imageInput">📷 上传图片（顶部统一入口）</label>
+                    <label for="imageInput">📷 上传图片</label>
                     <div class="image-upload-drop" id="imageUploadDrop">
                         <input id="imageInput" class="glass-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif">
-                        <p class="small">选择或拖入图片；同一张图可用于 AI 改图、模型分析和 Markdown 插入。</p>
+                        <p class="small">选择或拖入图片；同一张图可用于 AI 改图或插入 Markdown。</p>
                     </div>
                     <div class="image-source" id="imageSourcePreview">
                         <img id="imageSourceThumb" alt="参考图预览">
                         <div class="image-source-info" id="imageSourceInfo">参考图片已载入</div>
                         <button class="btn secondary" id="removeImageSource" type="button">移除</button>
                     </div>
-                    <div class="actions" style="margin-top:8px">
-                        <button class="btn secondary" id="insertSourceImageBtn" type="button" disabled>原图插入 MD</button>
-                        <button class="btn purple" id="quickEditImageBtn" type="button">AI 改图</button>
+                    <div class="actions-vertical" style="margin-top:8px">
+                        <button class="btn purple full" id="quickEditImageBtn" type="button">AI 改图</button>
                     </div>
                 </div>
-                    </div>
-                </details>
-                <details class="sidebar-group" name="sidebar-tools">
-                    <summary class="sidebar-group-summary">
-                        <span class="sidebar-group-icon" aria-hidden="true">🔍</span>
-                        <span class="sidebar-group-copy">
-                            <span class="sidebar-group-title">图片分析</span>
-                            <span class="sidebar-group-desc">视觉理解、分析结果插入文档</span>
-                        </span>
-                        <span class="sidebar-group-chevron" aria-hidden="true">⌄</span>
-                    </summary>
-                    <div class="sidebar-group-body">
-                        <div class="form-group">
-                    <label for="imageAnalysisPrompt">分析要求</label>
-                    <textarea id="imageAnalysisPrompt" class="glass-input" rows="3">请用中文详细分析这张图片，包括主体与场景、构图与视角、光线和色彩、可辨认文字、图像质量及明显异常。对无法确认的信息请明确说明，不要臆测。</textarea>
-                    <div class="chat-actions">
-                        <button class="btn" id="analyzeImageBtn" type="button">🔍 模型分析图</button>
-                        <button class="btn secondary" id="insertImageAnalysisBtn" type="button" disabled>插入分析到 MD</button>
-                    </div>
-                    <div id="imageAnalysisStatus" class="image-status">使用上方对话 API 模型分析已上传图片；请确保所选模型支持视觉输入。</div>
-                    <div id="imageAnalysisResult" class="analysis-result" hidden>
-                        <div class="analysis-result-title">图片分析结果</div>
-                        <div id="imageAnalysisText" class="analysis-result-text"></div>
-                    </div>
-                </div>
-                    </div>
-                </details>
-                <details id="imageGenGroup" class="sidebar-group" name="sidebar-tools">
-                    <summary class="sidebar-group-summary">
-                        <span class="sidebar-group-icon" aria-hidden="true">✨</span>
-                        <span class="sidebar-group-copy">
-                            <span class="sidebar-group-title">AI 图像生成</span>
-                            <span class="sidebar-group-desc">GPT Image 与 Qwen · 参数与结果</span>
-                        </span>
-                        <span class="sidebar-group-chevron" aria-hidden="true">⌄</span>
-                    </summary>
-                    <div class="sidebar-group-body">
+                        </section>
+                        <div class="divider"></div>
+                        <section class="sidebar-subsection">
+                            <div class="sidebar-subsection-title">✨ AI 图像生成与改图</div>
                         <div class="form-group">
                     <label for="imageModel">🎨 生成模型</label>
                     <select id="imageModel" class="glass-input">
@@ -446,20 +409,16 @@
                     <label for="imagePrompt">提示词 / 编辑指令 <span class="prompt-count" id="imagePromptCount">0 字</span></label>
                     <textarea id="imagePrompt" class="glass-input" rows="4" placeholder="描述想生成的画面，或说明如何修改参考图片…"></textarea>
                 </div>
-                <div class="actions">
-                    <button class="btn purple" id="generateImageBtn" type="button">✦ 生成图片</button>
-                    <button class="btn secondary" id="insertImageBtn" type="button" disabled>插入图片链接</button>
+                <div class="actions-vertical">
+                    <button class="btn purple full" id="generateImageBtn" type="button">✦ 生成图片</button>
                 </div>
-                <div class="image-insert-actions">
-                    <button class="btn secondary" id="insertImageBase64Btn" type="button" disabled>嵌入 Base64</button>
-                    <button class="btn secondary" id="copyImageUrlBtn" type="button" disabled>复制图片链接</button>
-                </div>
-                <p class="small">图片链接方式依赖原图地址有效期；Base64 方式会把图片数据写入 MD，文件体积会明显增加。</p>
                 <div class="image-actions">
+                    <button class="btn secondary" id="copyImageUrlBtn" type="button" disabled>复制图片链接</button>
                     <button class="btn secondary" id="downloadImageBtn" type="button" disabled>下载图片</button>
                     <button class="btn secondary" id="useImageBtn" type="button" disabled>继续编辑此图</button>
                 </div>
-                <div id="imageStatus" class="image-status">选择模型并输入提示词，即可生成图片；生成结果可直接插入 Markdown。</div>
+                <p class="small">生成结果可在文本工具中插入文档，也可复制链接、下载或继续编辑。</p>
+                <div id="imageStatus" class="image-status">选择模型并输入提示词，即可生成图片；生成完成后，可在文本工具中插入文档。</div>
                 <div id="imageTaskWrap" hidden>
                     <label for="imageTaskId">查询之前提交的任务</label>
                     <div class="actions">
@@ -471,18 +430,31 @@
                     <img id="imageResultImage" alt="AI 生成结果">
                     <div class="image-result-caption" id="imageResultCaption">生成结果</div>
                 </div>
+                        </section>
                     </div>
                 </details>
                 <details class="sidebar-group" name="sidebar-tools">
                     <summary class="sidebar-group-summary">
-                        <span class="sidebar-group-icon" aria-hidden="true">💬</span>
+                        <span class="sidebar-group-icon" aria-hidden="true">📝</span>
                         <span class="sidebar-group-copy">
-                            <span class="sidebar-group-title">AI 助手</span>
-                            <span class="sidebar-group-desc">API 对话、纠错润色与文档扩写</span>
+                            <span class="sidebar-group-title">文本工具</span>
+                            <span class="sidebar-group-desc">文档插图、AI 对话与修改、查找替换和朗读</span>
                         </span>
                         <span class="sidebar-group-chevron" aria-hidden="true">⌄</span>
                     </summary>
                     <div class="sidebar-group-body">
+                        <section class="sidebar-subsection">
+                            <div class="sidebar-subsection-title">🖼️ 文档插图</div>
+                            <div class="document-insert-grid">
+                                <button class="btn secondary" id="insertSourceImageBtn" type="button" disabled>插入原图</button>
+                                <button class="btn secondary" id="insertImageBtn" type="button" disabled>插入生成图链接</button>
+                                <button class="btn secondary" id="insertImageBase64Btn" type="button" disabled>生成图嵌入 Base64</button>
+                            </div>
+                            <p class="small" style="margin-top:8px">上传原图或完成 AI 生成后，在这里将图片插入当前 Markdown 文档。</p>
+                        </section>
+                        <div class="divider"></div>
+                        <section class="sidebar-subsection">
+                            <div class="sidebar-subsection-title">💬 AI 对话</div>
                         <div class="form-group">
                     <label for="apiKey">🔑 对话 API Key</label>
                     <div class="key-input-row"><input id="apiKey" class="glass-input" type="password" placeholder="请输入你的 API Key" autocomplete="off"><button class="key-toggle" id="toggleChatKey" type="button">显示</button></div>
@@ -513,8 +485,10 @@
                         <button class="btn secondary" id="chatClearBtn" type="button" style="height:32px;font-size:.76rem">清空对话</button>
                     </div>
                 </div>
-
-                
+                        </section>
+                        <div class="divider"></div>
+                        <section class="sidebar-subsection">
+                            <div class="sidebar-subsection-title">✍️ AI 文档修改</div>
 <div class="form-group">
                     <label for="aiInstruction">✨ 模型编辑指令</label>
                     <select id="aiInstruction" class="glass-input">
@@ -533,18 +507,10 @@
                     <button class="btn secondary" id="aiAppendBtn" onclick="runAiEdit('append')">追加结果</button>
                 </div>
                 <p class="small" id="aiStatus" style="margin-top:10px; color: var(--theme-green);"></p>
-                    </div>
-                </details>
-                <details class="sidebar-group" name="sidebar-tools">
-                    <summary class="sidebar-group-summary">
-                        <span class="sidebar-group-icon" aria-hidden="true">📝</span>
-                        <span class="sidebar-group-copy">
-                            <span class="sidebar-group-title">文档工具</span>
-                            <span class="sidebar-group-desc">查找替换、正则处理与语音朗读</span>
-                        </span>
-                        <span class="sidebar-group-chevron" aria-hidden="true">⌄</span>
-                    </summary>
-                    <div class="sidebar-group-body">
+                        </section>
+                        <div class="divider"></div>
+                        <section class="sidebar-subsection">
+                            <div class="sidebar-subsection-title">🔎 查找替换与语音朗读</div>
                         <div class="form-group">
                     <button class="btn secondary full" id="ttsToggleBtn" type="button">🔊 语音朗读</button>
                     <p class="small" id="ttsStatus" style="margin-top:7px">朗读当前 Markdown 文字；自动跳过图片 Base64 和链接地址；使用浏览器本地中文语音，不上传文档。</p>
@@ -561,6 +527,7 @@
                     </label>
                     <button class="btn secondary" style="height:32px;padding:0 12px;font-size:.8rem" onclick="executeReplace()">🔄 替换</button>
                 </div>
+                        </section>
                     </div>
                 </details>
                 </div>
@@ -627,7 +594,7 @@
     </div>
 
     <script>
-        const DEFAULT_DOC = '# MDE Markdown 工作台\n\n欢迎使用 AI + Markdown 工作台。\n\n- 左侧：配置自定义对话 API、选择模型、进行 AI 对话与图像生成。\n- 中间：编辑 Markdown 源文档。\n- 右侧：实时预览排版效果。\n- 支持导出 Markdown、和 Word（DOCX）。\n\n你可以把 AI 对话回答或生成图片直接插入当前文档。';
+        const DEFAULT_DOC = '# MDE Markdown 工作台\n\n欢迎使用 AI + Markdown 工作台。\n\n- 左侧：图像工具负责上传、改图与生成；文本工具负责对话、文档修改与插图。\n- 中间：编辑 Markdown 源文档。\n- 右侧：实时预览排版效果。\n- 支持导出 Markdown、和 Word（DOCX）。\n\n你可以把 AI 对话回答或生成图片直接插入当前文档。';
         const STORAGE_KEYS = {
             doc: 'md_editor_document',
             apiKey: 'md_editor_api_key',
@@ -644,8 +611,6 @@
 
         let chatHistory = [];
         let lastChatReply = '';
-        let lastImageAnalysis = '';
-        let imageAnalysisRunning = false;
         let speechUtterance = null;
         let speechReadActive = false;
 
@@ -679,7 +644,6 @@
             renderPreview();
             initChatUI();
             initImageGenerator();
-            initImageAnalysis();
             initSpeechReader();
         });
 
@@ -1390,74 +1354,6 @@
             }
         }
 
-        async function analyzeUploadedImage() {
-            const button = document.getElementById('analyzeImageBtn');
-            const status = document.getElementById('imageAnalysisStatus');
-            const key = document.getElementById('apiKey').value.trim();
-            const prompt = document.getElementById('imageAnalysisPrompt').value.trim();
-            if (!imageSourceBlob) {
-                status.textContent = '请先上传一张图片。';
-                return;
-            }
-            if (!key) {
-                status.textContent = '请先填写上方对话 API Key。';
-                return;
-            }
-            if (imageAnalysisRunning) return;
-
-            imageAnalysisRunning = true;
-            button.disabled = true;
-            button.textContent = '分析中…';
-            status.textContent = '正在压缩图片并请求视觉模型…';
-            try {
-                saveSettings();
-                const imageData = await imageJpegData(imageSourceBlob);
-                const data = await requestChatCompletion([
-                    { role: 'system', content: '你是一名严谨的图像理解助手。根据用户提供的图片进行客观分析；区分可见事实与推测，不识别或猜测真实人物身份，不确定处明确说明。使用中文，结构清晰。' },
-                    {
-                        role: 'user',
-                        content: [
-                            { type: 'text', text: prompt || '请客观分析这张图片。' },
-                            { type: 'image_url', image_url: { url: imageData, detail: 'high' } }
-                        ]
-                    }
-                ], 4096, 120000);
-                const content = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
-                const result = Array.isArray(content)
-                    ? content.map(part => typeof part === 'string' ? part : (part.text || '')).filter(Boolean).join('\n')
-                    : String(content || '').trim();
-                if (!result) throw new Error('视觉模型没有返回有效分析内容。');
-                lastImageAnalysis = result;
-                document.getElementById('imageAnalysisText').textContent = result;
-                document.getElementById('imageAnalysisResult').hidden = false;
-                document.getElementById('insertImageAnalysisBtn').disabled = false;
-                status.textContent = '分析完成 · ' + (data.usage && data.usage.total_tokens ? data.usage.total_tokens + ' Tokens' : '视觉模型已返回结果');
-            } catch (error) {
-                let message = error.message || String(error);
-                if (/image_url|image input|vision|multimodal|unsupported|not support/i.test(message)) {
-                    message += '；当前模型或服务商可能不支持图像输入，请换成支持视觉理解的模型。';
-                }
-                status.textContent = '分析失败：' + message;
-            } finally {
-                imageAnalysisRunning = false;
-                button.disabled = false;
-                button.textContent = '🔍 模型分析图';
-            }
-        }
-
-        function insertImageAnalysisIntoMarkdown() {
-            if (!lastImageAnalysis) return;
-            const saved = insertAtCursor('\n\n## 图片分析\n\n' + lastImageAnalysis + '\n\n');
-            document.getElementById('imageAnalysisStatus').textContent = saved === false
-                ? '分析结果已插入，但本地自动保存空间可能不足，请导出 MD 备份。'
-                : '图片分析结果已插入 Markdown，右侧预览会同步更新。';
-        }
-
-        function initImageAnalysis() {
-            document.getElementById('analyzeImageBtn').addEventListener('click', analyzeUploadedImage);
-            document.getElementById('insertImageAnalysisBtn').addEventListener('click', insertImageAnalysisIntoMarkdown);
-        }
-
         function initChatUI() {
             document.getElementById('chatSendBtn').addEventListener('click', sendChatPrompt);
             document.getElementById('chatTestBtn').addEventListener('click', testChatApi);
@@ -1660,10 +1556,6 @@
             document.getElementById('imageSourceInfo').textContent = imageSourceName + ' · ' + (blob.size / 1048576).toFixed(2) + ' MB';
             document.getElementById('imageSourcePreview').classList.add('show');
             document.getElementById('insertSourceImageBtn').disabled = false;
-            lastImageAnalysis = '';
-            document.getElementById('imageAnalysisResult').hidden = true;
-            document.getElementById('insertImageAnalysisBtn').disabled = true;
-            document.getElementById('imageAnalysisStatus').textContent = '图片已更新，可以重新进行模型分析。';
             updateImageTaskLabel();
         }
 
@@ -1676,10 +1568,6 @@
             document.getElementById('imageSourcePreview').classList.remove('show');
             document.getElementById('imageSourceThumb').removeAttribute('src');
             document.getElementById('insertSourceImageBtn').disabled = true;
-            lastImageAnalysis = '';
-            document.getElementById('imageAnalysisResult').hidden = true;
-            document.getElementById('insertImageAnalysisBtn').disabled = true;
-            document.getElementById('imageAnalysisStatus').textContent = '请先上传图片，再进行模型分析。';
             updateImageTaskLabel();
         }
 
@@ -2190,8 +2078,6 @@
                 }
                 document.getElementById('imageTaskMode').value = 'edit';
                 updateImageTaskLabel();
-                const imageGenGroup = document.getElementById('imageGenGroup');
-                if (imageGenGroup) imageGenGroup.open = true;
                 document.getElementById('imagePrompt').scrollIntoView({ behavior: 'smooth', block: 'center' });
                 document.getElementById('imagePrompt').focus();
                 imageStatus('已切换到图像编辑模式。输入修改要求后，点击“开始改图”。', 'success');
